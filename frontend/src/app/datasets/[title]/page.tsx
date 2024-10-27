@@ -7,23 +7,32 @@ export async function generateStaticParams() {
 }
 
 export default function Dataset({ params }: { params: { title: string } }) {
-  return (
-    <>
-      {params.title.includes("rasa") ? (
-        <iframe
-          src={"https://rasa.ai4bharat.org/"}
-          title={`${params.title}`}
-          width="100%"
-          height={2000}
-        />
-      ) : (
-        <iframe
-          src={`https://datasets.ai4bharat.org/${params.title}`}
-          title={`${params.title}`}
-          width="100%"
-          height={2000}
-        />
-      )}
-    </>
-  );
+  if (params.title.includes("rasa")) {
+    return (
+      <iframe
+        src={"https://rasa.ai4bharat.org/"}
+        title={`${params.title}`}
+        width="100%"
+        height={2000}
+      />
+    );
+  } else if (params.title.includes("indicvoices")) {
+    return (
+      <iframe
+        src={"https://indicvoices.ai4bharat.org/"}
+        title={`${params.title}`}
+        width="100%"
+        height={2000}
+      />
+    );
+  } else {
+    return (
+      <iframe
+        src={`https://datasets.ai4bharat.org/${params.title}`}
+        title={`${params.title}`}
+        width="100%"
+        height={2000}
+      />
+    );
+  }
 }
