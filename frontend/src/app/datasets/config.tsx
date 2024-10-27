@@ -15,4 +15,5 @@ export const datasets = [
   { title: "rasa" },
   { title: "bpcc" },
   { title: "IndicMT-Eval" },
+  { title: "indicvoices" },
 ];
