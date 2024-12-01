@@ -1,24 +1,22 @@
 "use client";
-import React from "react";
-import { useState } from "react";
+import { API_URL, LANGUAGE_CODE_NAMES } from "@/app/config";
+import { IndicTransliterate } from "@ai4bharat/indic-transliterate";
 import {
-  FormControl,
-  FormLabel,
-  FormErrorMessage,
-  FormHelperText,
-  Select,
-  Textarea,
   Button,
   Card,
-  HStack,
-  VStack,
+  FormControl,
+  FormLabel,
+  Select,
   Switch,
+  Textarea,
+  useToast,
+  VStack,
+  Progress,
+  CircularProgress,
 } from "@chakra-ui/react";
-import { LANGUAGE_CODE_NAMES } from "@/app/config";
 import axios from "axios";
-import { API_URL } from "@/app/config";
-import { IndicTransliterate } from "@ai4bharat/indic-transliterate";
-import { useToast } from "@chakra-ui/react";
+import { useState } from "react";
+import Feedback from "../Feedback";
 
 const fetchTranslation = async ({
   sourceLanguage,
@@ -26,25 +24,27 @@ const fetchTranslation = async ({
   input,
   task,
   serviceId,
+  track,
 }: {
   sourceLanguage: string;
   targetLanguage: string;
   input: string;
   task: string;
   serviceId: string;
+  track: boolean;
 }) => {
   try {
-    const response = await axios.post(`${API_URL}/inference/`, {
+    const response = await axios.post(`${API_URL}/inference/translate`, {
       sourceLanguage: sourceLanguage,
       targetLanguage: targetLanguage,
       input: input,
       task: task,
       serviceId: serviceId,
+      track: track,
     });
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching inference:", error);
-    return {};
+    return response;
+  } catch (error: any) {
+    return error.response;
   }
 };
 
@@ -63,6 +63,9 @@ export default function NMT({ services }: { services: any }) {
   const [transliteration, setTransliteration] = useState(true);
   const [inputText, setInputText] = useState("");
   const [outputText, setOutputText] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [tracking, setTracking] = useState(true);
 
   const toast = useToast();
 
@@ -142,6 +145,14 @@ export default function NMT({ services }: { services: any }) {
                 onChange={() => setTransliteration(!transliteration)}
                 colorScheme={"orange"}
               ></Switch>
+              <FormLabel textColor={"gray.500"}>
+                Allow the AI to be improved by usage analysis.
+              </FormLabel>
+              <Switch
+                isChecked={tracking}
+                onChange={(e) => setTracking(e.target.checked)}
+                colorScheme="orange"
+              />
             </VStack>
           </VStack>
           <VStack w={"full"}>
@@ -154,10 +165,12 @@ export default function NMT({ services }: { services: any }) {
               }}
               lang={sourceLanguage}
             />
+
             <Textarea value={outputText} isReadOnly></Textarea>
             <Button
               onClick={async () => {
                 setOutputText("");
+                setSuccess(false);
                 if (inputText === "") {
                   toast({
                     title: "Input Error",
@@ -167,28 +180,90 @@ export default function NMT({ services }: { services: any }) {
                     isClosable: true,
                   });
                 } else {
-                  const inferenceResult = await fetchTranslation({
-                    sourceLanguage: sourceLanguage,
-                    targetLanguage: targetLanguage,
-                    input: inputText,
-                    task: "translation",
-                    serviceId: service,
-                  });
-
-                  setOutputText(inferenceResult["output"][0]["target"]);
-                  toast({
-                    title: "Success",
-                    description: "Translation Inference Successful",
-                    status: "success",
-                    duration: 5000,
-                    isClosable: true,
-                  });
+                  try {
+                    setIsLoading(true);
+                    const response = await fetchTranslation({
+                      sourceLanguage: sourceLanguage,
+                      targetLanguage: targetLanguage,
+                      input: inputText,
+                      task: "translation",
+                      serviceId: service,
+                      track: tracking,
+                    });
+                    setIsLoading(false);
+                    if (response.status === 200) {
+                      setSuccess(true);
+                      setOutputText(response.data["output"][0]["target"]);
+                      toast({
+                        title: "Success",
+                        description: "Translation Inference Successful",
+                        status: "success",
+                        duration: 4000,
+                        isClosable: true,
+                      });
+                      setSuccess(true);
+                    } else if (response.status === 403) {
+                      setSuccess(false);
+                      setOutputText("");
+                      toast({
+                        title: "Warning",
+                        description:
+                          "You have reached maximum trials in a minute",
+                        status: "warning",
+                        duration: 4000,
+                        isClosable: true,
+                      });
+                    } else {
+                      setSuccess(false);
+                      setOutputText("");
+                      toast({
+                        title: "Warning",
+                        description:
+                          "Service Currently Unavailable, Please Try Again Later",
+                        status: "warning",
+                        duration: 4000,
+                        isClosable: true,
+                      });
+                    }
+                  } catch (error) {
+                    setIsLoading(false);
+                    setSuccess(false);
+                    setOutputText("");
+                    toast({
+                      title: "Warning",
+                      description:
+                        "Service Currently Unavailable, Please Try Again Later",
+                      status: "warning",
+                      duration: 4000,
+                      isClosable: true,
+                    });
+                  }
                 }
               }}
               color={"a4borange"}
             >
               Translate
             </Button>
+            {success ? (
+              <Feedback
+                serviceId={service}
+                task="translation"
+                modelInput={inputText}
+                modelResponse={outputText}
+                sourceLanguage={sourceLanguage}
+                targetLanguage={targetLanguage}
+                domain="general"
+                track={tracking}
+              />
+            ) : (
+              <>
+                {isLoading ? (
+                  <CircularProgress isIndeterminate color="a4borange" />
+                ) : (
+                  <></>
+                )}
+              </>
+            )}
           </VStack>
         </VStack>
       </FormControl>

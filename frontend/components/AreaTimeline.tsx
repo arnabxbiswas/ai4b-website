@@ -16,11 +16,26 @@ import {
   AccordionIcon,
   AccordionItem,
 } from "@chakra-ui/react";
-// Here we have used react-icons package for the icons
-import { FaPaperclip, FaGithub, FaArrowDown } from "react-icons/fa";
+import { FaPaperclip, FaGithub, FaCode } from "react-icons/fa";
 import { useState } from "react";
 import { imagePrefix } from "@/app/config";
 import Link from "next/link";
+import Image from "next/image";
+
+const monthNames = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
 interface Publication {
   title: string;
@@ -28,9 +43,10 @@ interface Publication {
   area: string;
   conference: string;
   published_on: string;
-  hf_id: string;
+  hf_link: string;
   paper_link: string;
   github_link: string;
+  colab_link: string;
   website_link: string;
   type: string;
 }
@@ -89,10 +105,11 @@ interface CardProps {
   area: string;
   published_on: string;
   conference: string;
-  hf_id: string;
+  hf_link: string;
   paper_link: string;
   github_link: string;
   website_link: string;
+  colab_link: string;
   type: string;
   index: number;
 }
@@ -136,13 +153,15 @@ const Card = ({
   area,
   published_on,
   conference,
-  hf_id,
+  hf_link,
   paper_link,
   github_link,
   website_link,
+  colab_link,
   type,
   index,
 }: CardProps) => {
+  const dateObject = new Date(published_on);
   const isEvenId = index % 2 == 0;
   let borderWidthValue = isEvenId ? "15px 15px 15px 0" : "15px 0 15px 15px";
   let leftValue = isEvenId ? "-15px" : "unset";
@@ -161,16 +180,37 @@ const Card = ({
       bg={useColorModeValue("gray.100", "gray.800")}
       alignItems="center"
       pos="relative"
-      borderRadius={type === "Model" ? undefined : 30}
+      borderRadius={30}
+      left={leftValue}
+      right={rightValue}
     >
       <Box>
-        <HStack>
+        <HStack mb={3}>
           <HStack spacing={2} mb={1}>
-            <Text fontSize="lg" textColor={"a4borange"}>
-              {published_on}
-            </Text>
-            <Text fontSize="sm">{type}</Text>
-            <Text fontSize="sm">{conference}</Text>
+            <Box p={2} bg="a4borange" borderRadius={15}>
+              <HStack>
+                <Text fontSize="sm" textColor={"white"}>
+                  {monthNames[dateObject.getMonth()]}
+                </Text>
+                <Text fontSize="sm" textColor={"white"}>
+                  {dateObject.getFullYear()}
+                </Text>
+              </HStack>
+            </Box>
+            <Box p={2} bg="a4borange" borderRadius={15}>
+              <Text textColor={"white"} fontSize="sm">
+                {type}
+              </Text>
+            </Box>
+            {conference ? (
+              <Box p={2} bg="a4borange" borderRadius={15}>
+                <Text textColor={"white"} fontSize="sm">
+                  {conference}
+                </Text>
+              </Box>
+            ) : (
+              <></>
+            )}
           </HStack>
         </HStack>
 
@@ -180,7 +220,7 @@ const Card = ({
             href={
               type === "Model"
                 ? `${imagePrefix}/areas/model/${area}/${title}`
-                : website_link
+                : website_link || `${imagePrefix}`
             }
             fontSize="1xl"
             lineHeight={1.2}
@@ -198,42 +238,63 @@ const Card = ({
             ) : (
               <></>
             )}
-            <Link target="_blank" href={paper_link}>
-              <FaPaperclip size={25} />
-            </Link>
-            {hf_id === null ? (
-              <></>
+            {colab_link ? (
+              <Link target="_blank" href={colab_link}>
+                <FaCode size={25} />
+              </Link>
             ) : (
-              <Link
-                target="_blank"
-                href={
-                  type === "Model"
-                    ? `https://huggingface.co/${hf_id}`
-                    : `https://huggingface.co/datasets/${hf_id}`
-                }
-              >
+              <></>
+            )}
+            {paper_link ? (
+              <Link target="_blank" href={paper_link}>
+                <FaPaperclip size={25} />
+              </Link>
+            ) : (
+              <></>
+            )}
+            {hf_link ? (
+              <Link target="_blank" href={hf_link}>
                 <img
                   src="https://huggingface.co/front/assets/huggingface_logo-noborder.svg"
                   alt="Hugging Face"
                   style={{ width: "25px", height: "25px" }}
                 />
               </Link>
+            ) : (
+              <></>
             )}
           </HStack>
         </VStack>
         {type === "Model" ? (
           <Button
             as={Link}
+            target="_blank"
             href={`${imagePrefix}/areas/model/${area}/${title}`}
             borderColor={"a4borange"}
             variant={"outline"}
             color={"a4borange"}
             fontSize={15}
           >
-            Learn More
+            View Model
           </Button>
         ) : (
-          <></>
+          <>
+            {website_link ? (
+              <Button
+                as={Link}
+                target="_blank"
+                href={website_link}
+                borderColor={"a4borange"}
+                variant={"outline"}
+                color={"a4borange"}
+                fontSize={15}
+              >
+                View Dataset
+              </Button>
+            ) : (
+              <></>
+            )}
+          </>
         )}
       </Box>
     </HStack>

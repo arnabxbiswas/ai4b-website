@@ -13,6 +13,10 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path="/home/ai4bharat/ai4b-website/backend/.env")
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -21,14 +25,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-$b@55^do#pwyl)vdgf=5az6mk=g^w33nn63mc9cg&1a+oaje2l"
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["localhost","admin.models.ai4bharat.org"]
+ALLOWED_HOSTS = ["localhost","admin.models.ai4bharat.org","test.ai4bharat.org","ai4bharat.iitm.ac.in"]
 
 TIME_ZONE = "Asia/Kolkata"
+
+SECURE_SSL_REDIRECT = True
 
 
 # Application definition
@@ -46,6 +52,8 @@ INSTALLED_APPS = [
     "rest_framework",
     "django_filters",
     "corsheaders",
+    'import_export',
+    'adrf'
 ]
 
 MIDDLEWARE = [
@@ -57,10 +65,12 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    "backend.get_ip.reverse_proxy"
 ]
 CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]
 
 ROOT_URLCONF = "backend.urls"
+
 
 TEMPLATES = [
     {
@@ -139,6 +149,18 @@ MEDIA_URL = "/media/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
+
+RATELIMIT_USE_CACHE = 'default'
+
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
@@ -146,6 +168,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly"
     ],
     "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
+
 }
 
 MEDIA_URL = "/media/"
@@ -165,3 +188,7 @@ CORS_ALLOW_HEADERS = (
 
 
 DEBUG_PROPAGATE_EXCEPTIONS = True
+
+CSRF_COOKIE_SECURE = True
+
+SESSION_COOKIE_SECURE = True

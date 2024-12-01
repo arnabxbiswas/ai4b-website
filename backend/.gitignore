@@ -32,3 +32,5 @@ Caddyfile
 /static/
 
 data_dump.json
+db_bkp.json
+website_db.json

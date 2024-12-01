@@ -13,12 +13,46 @@ import {
   HStack,
   VStack,
   Switch,
+  CircularProgress,
 } from "@chakra-ui/react";
 import { LANGUAGE_CODE_NAMES } from "@/app/config";
 import axios from "axios";
 import { API_URL } from "@/app/config";
 import { IndicTransliterate } from "@ai4bharat/indic-transliterate";
 import { useToast } from "@chakra-ui/react";
+import Feedback from "../Feedback";
+
+const fetchAudio = async ({
+  sourceLanguage,
+  input,
+  gender,
+  samplingRate,
+  serviceId,
+  track,
+}: {
+  sourceLanguage: string;
+  input: string;
+  gender: string;
+  samplingRate: number;
+  serviceId: string;
+  track: boolean;
+}) => {
+  try {
+    const response = await axios.post(`${API_URL}/inference/convert`, {
+      sourceLanguage: sourceLanguage,
+      input: input,
+      task: "tts",
+      serviceId: serviceId,
+      samplingRate: samplingRate,
+      gender: gender,
+      track: track,
+    });
+    return response;
+  } catch (error: any) {
+    return error.response;
+  }
+  // return "data:audio/wav;base64," + result["audio"][0]["audioContent"];
+};
 
 interface LanguageCodeNames {
   [key: string]: string;
@@ -34,31 +68,10 @@ export default function TTS({ services }: { services: any }) {
   const [transliteration, setTransliteration] = useState(true);
   const [inputText, setInputText] = useState("");
   const [output, setOutput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [tracking, setTracking] = useState(true);
 
-  const fetchAudio = async ({
-    sourceLanguage,
-    input,
-    gender,
-    samplingRate,
-    serviceId,
-  }: {
-    sourceLanguage: string;
-    input: string;
-    gender: string;
-    samplingRate: number;
-    serviceId: string;
-  }) => {
-    const response = await axios.post(`${API_URL}/inference/`, {
-      sourceLanguage: sourceLanguage,
-      input: input,
-      task: "tts",
-      serviceId: serviceId,
-      samplingRate: samplingRate,
-      gender: gender,
-    });
-    const result = response.data;
-    return "data:audio/wav;base64," + result["audio"][0]["audioContent"];
-  };
+  const [success, setSuccess] = useState(false);
 
   const toast = useToast();
 
@@ -120,6 +133,14 @@ export default function TTS({ services }: { services: any }) {
                     onChange={() => setTransliteration(!transliteration)}
                     colorScheme={"orange"}
                   ></Switch>
+                  <FormLabel textColor={"gray.500"}>
+                    Allow the AI to be improved by usage analysis.
+                  </FormLabel>
+                  <Switch
+                    isChecked={tracking}
+                    onChange={(e) => setTracking(e.target.checked)}
+                    colorScheme="orange"
+                  />
                 </VStack>
               </HStack>
             </VStack>
@@ -162,27 +183,95 @@ export default function TTS({ services }: { services: any }) {
             <Button
               onClick={async () => {
                 setOutput("");
-                const audioString = await fetchAudio({
-                  sourceLanguage,
-                  input: inputText,
-                  gender: gender,
-                  samplingRate: samplingRate,
-                  serviceId: service,
-                });
-                setOutput(audioString);
-                toast({
-                  title: "Success",
-                  description: "Conversion Successful",
-                  status: "success",
-                  duration: 5000,
-                  isClosable: true,
-                });
+                setSuccess(false);
+                try {
+                  setIsLoading(true);
+                  const response = await fetchAudio({
+                    sourceLanguage,
+                    input: inputText,
+                    gender: gender,
+                    samplingRate: samplingRate,
+                    serviceId: service,
+                    track: tracking,
+                  });
+                  setIsLoading(false);
+                  if (response.status === 200) {
+                    setSuccess(true);
+                    const result = response.data;
+                    setOutput(result["audio"][0]["audioContent"]);
+                    toast({
+                      title: "Success",
+                      description: "Translation Inference Successful",
+                      status: "success",
+                      duration: 4000,
+                      isClosable: true,
+                    });
+                  } else if (response.status === 403) {
+                    setSuccess(false);
+                    setOutput("");
+                    toast({
+                      title: "Warning",
+                      description:
+                        "You have reached maximum trials in a minute",
+                      status: "warning",
+                      duration: 4000,
+                      isClosable: true,
+                    });
+                  } else {
+                    setSuccess(false);
+                    setOutput("");
+                    toast({
+                      title: "Warning",
+                      description:
+                        "Service Currently Unavailable, Please Try Again Later",
+                      status: "warning",
+                      duration: 4000,
+                      isClosable: true,
+                    });
+                  }
+                } catch (error) {
+                  setIsLoading(false);
+                  setSuccess(false);
+                  setOutput("");
+                  toast({
+                    title: "Warning",
+                    description:
+                      "Service Currently Unavailable, Please Try Again Later",
+                    status: "warning",
+                    duration: 4000,
+                    isClosable: true,
+                  });
+                }
               }}
               color={"a4borange"}
             >
               Convert
             </Button>
-            {output !== "" ? <audio src={output} controls /> : <></>}
+            {output !== "" ? (
+              <audio src={"data:audio/wav;base64," + output} controls />
+            ) : (
+              <></>
+            )}
+            {success ? (
+              <Feedback
+                serviceId={service}
+                task="tts"
+                modelInput={inputText}
+                modelResponse={output}
+                sourceLanguage={sourceLanguage}
+                targetLanguage=""
+                domain="general"
+                track={tracking}
+              />
+            ) : (
+              <>
+                {isLoading ? (
+                  <CircularProgress isIndeterminate color="a4borange" />
+                ) : (
+                  <></>
+                )}
+              </>
+            )}
           </VStack>
         </VStack>
       </FormControl>

@@ -92,7 +92,7 @@ export default function ToolComponent({ slug }: { slug: string }) {
         py={{ base: 10, md: 18 }}
         direction={{ base: "column", md: "row" }}
       >
-        <Stack flex={1}>
+        <Stack flex={1} spacing={7}>
           <Heading
             lineHeight={1.1}
             fontWeight={600}
@@ -134,7 +134,9 @@ export default function ToolComponent({ slug }: { slug: string }) {
           {tool.main_video_hyperlink === "" ? (
             <></>
           ) : (
-            <ReactPlayer url={tool.main_video_hyperlink} controls />
+            <div className="curved-player-wrapper">
+              <ReactPlayer url={tool.main_video_hyperlink} controls />
+            </div>
           )}
         </Flex>
       </Stack>
@@ -161,16 +163,23 @@ export default function ToolComponent({ slug }: { slug: string }) {
       </Container>
       <Timeline release_timeline_json={tool.release_timeline_json} />
       {/* <ToolInstructions steps={tool.installation_steps_json} /> */}
-      <Stack
-        p={{ base: 5, md: 10 }}
-        direction={{ base: "column", md: "row" }}
-        backgroundSize="480px"
-        backgroundPosition="center right"
-        backgroundRepeat="no-repeat"
-        minH={{ base: "unset", md: "450px" }}
-      >
-        <ToolInstructions steps={tool.installation_steps_json} />
-      </Stack>
+      {tool.installation_steps_json !== null ? (
+        <Stack
+          p={{ base: 5, md: 10 }}
+          direction={{ base: "column", md: "row" }}
+          backgroundSize="480px"
+          backgroundPosition="center right"
+          backgroundRepeat="no-repeat"
+          minH={{ base: "unset", md: "450px" }}
+        >
+          <ToolInstructions
+            title={"Installation"}
+            steps={tool.installation_steps_json}
+          />
+        </Stack>
+      ) : (
+        <></>
+      )}
     </Container>
   );
 }

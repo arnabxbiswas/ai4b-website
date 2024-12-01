@@ -1,6 +1,11 @@
 from django.db import models
 from datetime import date
+from django.dispatch import receiver
+import os
+import github
+from dotenv import load_dotenv
 
+load_dotenv(dotenv_path="/home/ai4bharat/ai4b-website/backend/.env")
 
 
 class Area(models.TextChoices):
@@ -22,10 +27,28 @@ class Dataset(models.Model):
     paper_link = models.URLField(max_length=500)
     website_link = models.URLField(max_length=500, null=True, blank=True)
     github_link = models.URLField(max_length=500,null=True,blank=True)
-    hf_id = models.CharField(max_length=500,null=True,blank=True)
+    hf_link = models.URLField(max_length=500,null=True,blank=True)
 
     def __str__(self) -> str:
         return f"{self.title}"
+    
+
+class ModelFeedback(models.Model):
+    id = models.AutoField(primary_key=True)
+    serviceId = models.CharField(max_length=500)
+    task = models.CharField(max_length=500)
+    postedOn = models.DateField(default=date.today)
+    modelInput = models.TextField()
+    modelResponse = models.TextField()
+    liked = models.BooleanField(default=False)
+    comment = models.TextField()
+    sourceLanguage = models.CharField(max_length=100,null=True,blank=True)
+    targetLanguage = models.CharField(max_length=100,null=True,blank=True)
+    domain = models.CharField(max_length=100,null=True,blank=True)
+
+    def __str__(self) -> str:
+        return f"{self.id}_{self.serviceId}"
+    
 
 
 class Model(models.Model):
@@ -33,16 +56,32 @@ class Model(models.Model):
     title = models.CharField(max_length=500)
     area = models.CharField(choices=Area.choices, max_length=10)
     published_on = models.DateField(default=date.today)
+    latest = models.BooleanField(default=False)
     conference = models.CharField(max_length=20, null=True, blank=True)
     description = models.TextField()
-    paper_link = models.URLField(max_length=500)
+    paper_link = models.URLField(max_length=500,null=True,blank=True)
     website_link = models.URLField(max_length=500, null=True, blank=True)
     github_link = models.URLField(max_length=500,null=True,blank=True)
-    hf_id = models.CharField(max_length=500,null=True,blank=True)
+    colab_link = models.URLField(max_length=500,null=True,blank=True)
+    hf_link = models.URLField(max_length=500,null=True,blank=True)
     service_id = models.CharField(max_length=500, null=True, blank=True)
+    installation_steps_json = models.JSONField(null=True,blank=True)
+    usage_steps_json = models.JSONField(null=True,blank=True)
+    testimonials_json = models.JSONField(null=True,blank=True)
 
     def __str__(self) -> str:
         return f"{self.title}"
+    
+@receiver(models.signals.post_save, sender=Model)
+def execute_after_model_save(sender, instance, created, *args, **kwargs):
+    g = github.Github(login_or_token=os.getenv("GITHUB_WORKFLOW_TOKEN"))
+    repo = g.get_repo("AI4Bharat/ai4b-website")
+    workflow_name = "nextjs.yml"
+    workflow = repo.get_workflow(workflow_name)
+    ref = repo.get_branch("master")
+    workflow.create_dispatch(ref=ref)
+    print("New Model Deploy Triggered")
+    
 
 
 class Tool(models.Model):
@@ -54,10 +93,23 @@ class Tool(models.Model):
     release_timeline_json = models.JSONField()
     feature_cards_json = models.JSONField()
     contributor_cards_json = models.JSONField()
-    installation_steps_json = models.JSONField()
+    installation_steps_json = models.JSONField(null=True,blank=True)
 
     def __str__(self) -> str:
         return f"{self.title}"
+    
+@receiver(models.signals.post_save, sender=Tool)
+def execute_after_tool_save(sender, instance, created, *args, **kwargs):
+    if created:
+        g = github.Github(login_or_token=os.getenv("GITHUB_WORKFLOW_TOKEN"))
+        repo = g.get_repo("AI4Bharat/ai4b-website")
+        workflow_name = "nextjs.yml"
+        workflow = repo.get_workflow(workflow_name)
+        ref = repo.get_branch("master")
+        workflow.create_dispatch(ref=ref)
+        print("New Tool Deploy Triggered")
+    else:
+        print("Tool Updated")
     
 
 def image_directory_path(instance, filename):
@@ -74,6 +126,16 @@ class News(models.Model):
     published_on = models.DateField(default=date.today)
     image = models.ImageField(upload_to=image_directory_path,null=True,blank=True)
     related_link = models.URLField(max_length=500, null=True, blank=True)
+    markdown_content = models.TextField(null=True,blank=True)
+
+    def __str__(self) -> str:
+        return f"{self.title}"
+
+class Publication(models.Model):
+    id = models.AutoField(primary_key=True)
+    title = models.CharField(max_length=200)
+    dataset = models.ManyToManyField(Dataset,null=True,blank=True)
+    model = models.ManyToManyField(Model,null=True,blank=True,)
 
     def __str__(self) -> str:
         return f"{self.title}"

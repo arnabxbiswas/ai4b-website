@@ -1,24 +1,28 @@
 "use client";
-import React from "react";
-import {
-  Container,
-  Stack,
-  Flex,
-  Box,
-  Heading,
-  Text,
-  Link,
-  HStack,
-} from "@chakra-ui/react";
-import { useQuery } from "react-query";
 import { API_URL } from "@/app/config";
-import { useEffect, useState } from "react";
+import {
+  Box,
+  Container,
+  Divider,
+  Flex,
+  Heading,
+  HStack,
+  Link,
+  Stack,
+  Text,
+  VStack,
+  useToast,
+} from "@chakra-ui/react";
 import axios from "axios";
-import NMT from "./TryOut/NMT";
+import { useEffect, useState } from "react";
+import { FaCode, FaGithub, FaPaperclip } from "react-icons/fa";
+import { useQuery } from "react-query";
+import ToolInstructions from "./ToolInstructionComponent";
 import ASR from "./TryOut/ASR";
-import XLIT from "./TryOut/XLIT";
+import NMT from "./TryOut/NMT";
 import TTS from "./TryOut/TTS";
-import { FaPaperclip, FaGithub } from "react-icons/fa";
+import XLIT from "./TryOut/XLIT";
+import Feedback from "./Feedback";
 
 const fetchModel = async ({ title }: { title: string }) => {
   try {
@@ -41,6 +45,10 @@ interface Model {
   title: string;
   description?: string;
   services: any;
+  installation_steps_json: Array<any>;
+  usage_steps_json: Array<any>;
+  type: string;
+  hf_link: string;
 }
 
 const renderTryOut = ({ area, services }: { area: string; services: any }) => {
@@ -63,6 +71,8 @@ export default function ModelView({
   area: string;
   title: string;
 }) {
+  const toast = useToast();
+
   const [model, setModel] = useState<{
     service_id: string;
     inferenceSchema: any;
@@ -71,20 +81,30 @@ export default function ModelView({
     conference: string;
     paper_link: string | undefined;
     github_link: string | undefined;
+    colab_link: string | undefined;
     title: string;
     description?: string;
     services: any;
+    installation_steps_json: Array<any>;
+    usage_steps_json: Array<any>;
+    type: string;
+    hf_link: string;
   }>({
     title: "",
     description: "",
     github_link: "",
     paper_link: "",
+    colab_link: "",
     conference: "",
-    hfData: {},
+    hfData: null,
     inferenceSchema: {},
     languageFilters: {},
     service_id: "",
     services: {},
+    installation_steps_json: [],
+    usage_steps_json: [],
+    type: "",
+    hf_link: "",
   });
 
   const {
@@ -100,20 +120,39 @@ export default function ModelView({
         description: "",
         github_link: "",
         paper_link: "",
+        colab_link: "",
         conference: "",
-        hfData: {},
+        hfData: null,
         inferenceSchema: {},
         languageFilters: {},
         service_id: "",
         services: {},
+        installation_steps_json: [],
+        usage_steps_json: [],
+        type: "",
+        hf_link: "",
       });
     } else {
       setModel(modelData);
+      if (
+        modelData.service_id &&
+        modelData.services[Object.keys(modelData.services)[0]][
+          "languageFilters"
+        ]["sourceLanguages"].length === 0
+      ) {
+        toast({
+          title: "Warning",
+          description: "The Inference Service might not be available now",
+          status: "warning",
+          duration: 4000,
+          isClosable: true,
+        });
+      }
     }
   }, [modelError, modelLoading, modelData]);
 
   return (
-    <Container maxW={"7xl"}>
+    <Container paddingLeft={20} maxW={"7xl"}>
       <Stack
         align={"center"}
         spacing={{ base: 8, md: 10 }}
@@ -145,7 +184,7 @@ export default function ModelView({
             ) : (
               <></>
             )}
-            {model.hfData.downloads ? (
+            {model.hfData !== null ? (
               <Box
                 borderRadius={15}
                 p={1}
@@ -153,7 +192,7 @@ export default function ModelView({
                 borderColor={"a4borange"}
               >
                 <Text textColor={"a4borange"}>
-                  Downloads : {model.hfData.downloads}
+                  Downloads last month : {model.hfData.downloads}
                 </Text>
               </Box>
             ) : (
@@ -196,26 +235,92 @@ export default function ModelView({
             ) : (
               <></>
             )}
+            {model.colab_link ? (
+              <Box
+                borderRadius={50}
+                p={1}
+                borderWidth={3}
+                borderColor={"black"}
+              >
+                <Link target="_blank" href={model.colab_link}>
+                  <HStack>
+                    <FaCode size={25} />
+                    <Text>Colab</Text>
+                  </HStack>
+                </Link>
+              </Box>
+            ) : (
+              <></>
+            )}
+            {model.hf_link ? (
+              <Link target="_blank" href={model.hf_link}>
+                <HStack
+                  borderRadius={50}
+                  p={1}
+                  borderWidth={3}
+                  borderColor={"black"}
+                  width={"max-content"}
+                >
+                  <img
+                    src="https://huggingface.co/front/assets/huggingface_logo-noborder.svg"
+                    alt="Hugging Face"
+                    style={{ width: "25px", height: "25px" }}
+                  />
+                  <Text>Huggingface</Text>
+                </HStack>
+              </Link>
+            ) : (
+              <></>
+            )}
           </HStack>
         </Stack>
-        {model.service_id ? (
-          <Flex
-            flex={1}
-            justify={"center"}
-            align={"center"}
-            position={"relative"}
-            w={"full"}
-          >
-            {modelLoading ? (
-              <></>
-            ) : (
-              renderTryOut({ area: area, services: model.services })
-            )}
-          </Flex>
-        ) : (
-          <></>
-        )}
+        <VStack>
+          {model.service_id ? (
+            <Flex
+              flex={1}
+              justify={"center"}
+              align={"center"}
+              position={"relative"}
+              w={"full"}
+            >
+              {modelLoading ? (
+                <></>
+              ) : (
+                renderTryOut({ area: area, services: model.services })
+              )}
+            </Flex>
+          ) : (
+            <></>
+          )}
+        </VStack>
       </Stack>
+      {modelLoading ? (
+        <></>
+      ) : (
+        <>
+          {model.installation_steps_json === null ? (
+            <></>
+          ) : (
+            <ToolInstructions
+              title="Installation"
+              steps={model.installation_steps_json}
+            />
+          )}
+        </>
+      )}
+      <Divider m={3} />
+      {modelLoading ? (
+        <></>
+      ) : (
+        <>
+          {model.usage_steps_json === null ? (
+            <></>
+          ) : (
+            <ToolInstructions title="Usage" steps={model.usage_steps_json} />
+          )}
+        </>
+      )}
+      <br />
     </Container>
   );
 }

@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, ReactNode } from "react";
 import {
   Box,
   chakra,
@@ -9,16 +9,80 @@ import {
   VStack,
   Flex,
   Link,
-  Select,
   useColorModeValue,
   Button,
   Stack,
+  Wrap,
   useBreakpointValue,
+  Divider,
+  useRadio,
+  useRadioGroup,
+  CheckboxGroup,
+  Checkbox,
+  useCheckbox,
+  useCheckboxGroup,
+  UseCheckboxProps,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  useDisclosure,
 } from "@chakra-ui/react";
-import { FaPaperclip, FaGithub } from "react-icons/fa";
+import { FaPaperclip, FaGithub, FaCode } from "react-icons/fa";
 import { useQuery } from "react-query";
 import axios from "axios";
 import { API_URL } from "../config";
+import Image from "next/image";
+import { imagePrefix } from "../config";
+
+const monthNames = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+function RadioCard(props: any) {
+  const { getInputProps, getRadioProps } = useRadio(props);
+
+  const input = getInputProps();
+  const checkbox = getRadioProps();
+
+  return (
+    <Box as="label">
+      <input {...input} />
+      <Box
+        {...checkbox}
+        cursor="pointer"
+        borderWidth="1px"
+        borderRadius="md"
+        borderColor={"orange"}
+        boxShadow="md"
+        width={"fit-content"}
+        fontWeight={"bold"}
+        _checked={{
+          bg: "a4borange",
+          color: "white",
+          borderColor: "white",
+        }}
+        p={1}
+      >
+        {props.children.toString()}
+      </Box>
+    </Box>
+  );
+}
 
 const ExpandableText = ({
   text,
@@ -55,7 +119,7 @@ const fetchPubFilters = async () => {
 
 const fetchPublications = async () => {
   try {
-    const response = await axios.get(`${API_URL}/publications/`);
+    const response = await axios.get(`${API_URL}/pubs/`);
     return response.data;
   } catch (error) {
     console.error("Error fetching publications:", error);
@@ -69,11 +133,134 @@ interface Publication {
   area: string;
   conference: string;
   published_on: string;
-  hf_id: string;
+  dataset: any;
+  model: any;
   paper_link: string;
-  github_link: string;
-  type: string;
 }
+
+interface CheckboxButtonProps extends UseCheckboxProps {
+  children: ReactNode;
+}
+
+const EntryModal = ({
+  title,
+  description,
+  paper_link,
+  website_link,
+  github_link,
+  hf_link,
+  colab_link,
+}: {
+  title: string;
+  description: string;
+  paper_link: string;
+  website_link: string;
+  github_link: string;
+  hf_link: string;
+  colab_link: string;
+}) => {
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  return (
+    <>
+      <Button
+        textColor={"white"}
+        bg={"a4borange"}
+        _hover={{ bg: "red.500" }}
+        onClick={onOpen}
+      >
+        {title}
+      </Button>
+
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader as={Link} href={website_link}>
+            {title}
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <HStack>
+              {github_link ? (
+                <Link target="_blank" href={github_link}>
+                  <FaGithub size={25} />
+                </Link>
+              ) : (
+                <></>
+              )}
+              {colab_link ? (
+                <Link target="_blank" href={colab_link}>
+                  <FaCode size={25} />
+                </Link>
+              ) : (
+                <></>
+              )}
+              {paper_link ? (
+                <Link target="_blank" href={paper_link}>
+                  <FaPaperclip size={25} />
+                </Link>
+              ) : (
+                <></>
+              )}
+              {hf_link ? (
+                <Link target="_blank" href={hf_link}>
+                  <img
+                    src="https://huggingface.co/front/assets/huggingface_logo-noborder.svg"
+                    alt="Hugging Face"
+                    style={{ width: "25px", height: "25px" }}
+                  />
+                </Link>
+              ) : (
+                <></>
+              )}
+            </HStack>
+            <br />
+            {description}
+          </ModalBody>
+
+          <ModalFooter>
+            <Button
+              variant={"outline"}
+              colorScheme="orange"
+              mr={3}
+              onClick={onClose}
+            >
+              Close
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </>
+  );
+};
+
+const CheckboxButton = (props: CheckboxButtonProps) => {
+  const { getInputProps, getCheckboxProps } = useCheckbox(props);
+
+  const input = getInputProps();
+  const checkbox = getCheckboxProps();
+
+  return (
+    <Box as="label">
+      <input {...input} />
+      <Box
+        {...checkbox}
+        cursor="pointer"
+        borderRadius="md"
+        fontSize={15}
+        borderWidth={2}
+        _checked={{
+          bg: "a4borange",
+          color: "white",
+          borderColor: "a4borange",
+        }}
+        px={5}
+        py={2}
+      >
+        {props.children}
+      </Box>
+    </Box>
+  );
+};
 
 const Publications = () => {
   const isMobile = useBreakpointValue({ base: true, md: false });
@@ -88,9 +275,9 @@ const Publications = () => {
     Publication[]
   >([]);
 
-  const [filterArea, setFilterArea] = useState("All");
-  const [filterYear, setFilterYear] = useState("All");
-  const [filterConference, setFilterConference] = useState("All");
+  const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
+  const [selectedYears, setSelectedYears] = useState<string[]>([]);
+  const [selectedConferences, setSelectedConferences] = useState<string[]>([]);
 
   const {
     data: filterData,
@@ -116,119 +303,142 @@ const Publications = () => {
 
   useEffect(() => {
     const filtered = publications.filter((pub) => {
-      const matchesArea = filterArea === "All" || pub.area === filterArea;
+      const matchesArea =
+        selectedAreas.length === 0 || selectedAreas.includes(pub.area);
       const matchesConference =
-        filterConference === "All" || pub.conference === filterConference;
+        selectedConferences.length === 0 ||
+        selectedConferences.includes(pub.conference);
       const matchesYear =
-        filterYear === "All" ||
-        new Date(pub.published_on).getFullYear().toString() === filterYear;
+        selectedYears.length === 0 ||
+        selectedYears.includes(
+          new Date(pub.published_on).getFullYear().toString()
+        );
       return matchesArea && matchesConference && matchesYear;
     });
 
     setFilteredPublications(filtered);
-  }, [filterArea, filterYear, filterConference, publications]);
+  }, [selectedAreas, selectedConferences, selectedYears, publications]);
+
+  const handleSelect = (setter: any) => (value: any) => {
+    setter((prev: any) =>
+      prev.includes(value)
+        ? prev.filter((v: any) => v !== value)
+        : [...prev, value]
+    );
+  };
 
   return (
-    <Container maxWidth="4xl" p={{ base: 2, sm: 10 }}>
+    <Box p={5}>
       <chakra.h3 fontSize="4xl" fontWeight="bold" mb={18} textAlign="center">
         Publications
       </chakra.h3>
-      <Stack>
+      <Stack ml={5}>
         <HStack>
-          <Text>Area: </Text>
-          <Select
-            value={filterArea}
-            onChange={(event) => setFilterArea(event.target.value)}
-          >
-            <option value="All">All</option>
-            {(filters.areas as string[]).map((area) => (
-              <option key={area} value={area}>
-                {area.toUpperCase()}
-              </option>
+          <Text fontSize={"lg"} as="b">
+            Area:{" "}
+          </Text>
+          <Wrap>
+            {filters.areas.map((value) => (
+              <CheckboxButton
+                key={value}
+                value={value}
+                onChange={() => handleSelect(setSelectedAreas)(value)}
+                isChecked={selectedAreas.includes(value)}
+              >
+                {value}
+              </CheckboxButton>
             ))}
-          </Select>
+          </Wrap>
         </HStack>
         <HStack>
-          <Text>Conference: </Text>
-          <Select
-            value={filterConference}
-            onChange={(event) => setFilterConference(event.target.value)}
-          >
-            <option value="All">All</option>
-            {(filters.conferences as string[]).map((conference) => (
-              <option key={conference} value={conference}>
-                {conference.toUpperCase()}
-              </option>
+          <Text fontSize={"lg"} as="b">
+            Year:{" "}
+          </Text>
+          <Wrap>
+            {filters.years.map((value) => (
+              <CheckboxButton
+                key={value}
+                value={value}
+                onChange={() => handleSelect(setSelectedYears)(value)}
+                isChecked={selectedYears.includes(value)}
+              >
+                {value}
+              </CheckboxButton>
             ))}
-          </Select>
+          </Wrap>
         </HStack>
         <HStack>
-          <Text>Year: </Text>
-          <Select
-            value={filterYear}
-            onChange={(event) => setFilterYear(event.target.value)}
-          >
-            <option value="All">All</option>
-            {filters.years.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
+          <Text fontSize={"lg"} as="b">
+            Conference:{" "}
+          </Text>
+          <Wrap>
+            {filters.conferences.map((value) => (
+              <CheckboxButton
+                key={value}
+                value={value}
+                onChange={() => handleSelect(setSelectedConferences)(value)}
+                isChecked={selectedConferences.includes(value)}
+              >
+                {value}
+              </CheckboxButton>
             ))}
-          </Select>
+          </Wrap>
         </HStack>
         <Button
+          mt={7}
+          alignSelf={"center"}
+          width={"fit-content"}
           color={"a4borange"}
           onClick={() => {
-            setFilterArea("All");
-            setFilterConference("All");
-            setFilterYear("All");
+            setSelectedAreas([]);
+            setSelectedConferences([]);
+            setSelectedYears([]);
           }}
         >
           Reset Filters
         </Button>
       </Stack>
+      <Divider m={5} />
       <br />
-      <Container height={isMobile ? 500 : "auto"} overflowY={"scroll"}>
+      <Container
+        width={"100%"}
+        height={isMobile ? 500 : "auto"}
+        overflowY={"scroll"}
+      >
         {filteredPublications.map((pub, index) => (
           <Flex key={index} mb="10px">
             <LineWithDot />
             <Card
               title={pub.title}
               categories={[pub.area, pub.conference]}
-              description={pub.description}
-              date={new Date(pub.published_on).toDateString()}
-              hf_id={pub.hf_id}
+              date={new Date(pub.published_on)}
               paper_link={pub.paper_link}
-              github_link={pub.github_link}
-              type={pub.type}
+              model={pub.model}
+              dataset={pub.dataset}
             />
           </Flex>
         ))}
       </Container>
-    </Container>
+    </Box>
   );
 };
 
 interface CardProps {
   title: string;
-  categories: string[];
-  description: string;
-  date: string;
-  hf_id: string;
   paper_link: string;
-  github_link: string;
-  type: string;
+  categories: string[];
+  date: Date;
+  model: any;
+  dataset: any;
 }
 
 const Card = ({
   title,
   categories,
-  description,
-  date,
-  hf_id,
   paper_link,
-  github_link,
-  type,
+  date,
+  model,
+  dataset,
 }: CardProps) => {
   return (
     <HStack
@@ -236,7 +446,6 @@ const Card = ({
       bg={useColorModeValue("gray.100", "gray.800")}
       spacing={5}
       rounded="lg"
-      alignItems="center"
       pos="relative"
       _before={{
         content: `""`,
@@ -269,42 +478,95 @@ const Card = ({
             lineHeight={1.2}
             fontWeight="bold"
             w="100%"
+            href={paper_link}
           >
             {title}
           </chakra.h1>
-          <ExpandableText noOfLines={2} text={description} />
-          <HStack>
-            {github_link ? (
-              <Link target="_blank" href={github_link}>
-                <FaGithub size={50} />
-              </Link>
+          <HStack
+            p="2"
+            bg="white"
+            borderRadius={15}
+            width={"100%"}
+            height={"fit-content"}
+            alignItems={"center"}
+            justifyContent={"center"}
+            borderColor={"a4borange"}
+            borderWidth={1}
+          >
+            {model.length !== 0 ? (
+              <VStack p={5}>
+                <Text as="b" fontSize={"xl"}>
+                  Models
+                </Text>
+                <HStack>
+                  {model.map((entry: any, index: number) => (
+                    <EntryModal
+                      title={entry.title}
+                      description={entry.description}
+                      paper_link={entry.paper_link}
+                      website_link={entry.website_link}
+                      hf_link={entry.hf_link}
+                      github_link={entry.github_link}
+                      colab_link={entry.colab_link}
+                    />
+                  ))}
+                </HStack>
+              </VStack>
             ) : (
               <></>
             )}
-            <Link target="_blank" href={paper_link}>
-              <FaPaperclip size={50} />
-            </Link>
-            {hf_id === null ? (
-              <></>
+            {dataset.length !== 0 ? (
+              <VStack p={5}>
+                <Text as="b" fontSize={"xl"}>
+                  Datasets
+                </Text>
+                <HStack>
+                  {dataset.map((entry: any, index: number) => (
+                    <EntryModal
+                      title={entry.title}
+                      description={entry.description}
+                      paper_link={entry.paper_link}
+                      website_link={entry.website_link}
+                      hf_link={entry.hf_link}
+                      github_link={entry.github_link}
+                      colab_link={entry.colab_link}
+                    />
+                  ))}
+                </HStack>
+              </VStack>
             ) : (
-              <Link
-                target="_blank"
-                href={
-                  type === "Model"
-                    ? `https://huggingface.co/${hf_id}`
-                    : `https://huggingface.co/datasets/${hf_id}`
-                }
-              >
-                <img
-                  src="https://huggingface.co/front/assets/huggingface_logo-noborder.svg"
-                  alt="Hugging Face"
-                  style={{ width: "50px", height: "50px" }}
-                />
-              </Link>
+              <></>
             )}
           </HStack>
+          {/* {model.length !== 0 ? (
+            <HStack p="5" bg="tomato" width={"100%"} height={"200"}>
+              {model.map((idx, entry) => (
+                <EntryModal />
+              ))}
+            </HStack>
+          ) : (
+            <></>
+          )} */}
+          {/* <Button
+            width={"fit-content"}
+            p={2}
+            colorScheme="orange"
+            borderRadius={15}
+            variant={"outline"}
+          >
+            View the Models
+          </Button> */}
         </VStack>
-        <Text fontSize="sm">{date}</Text>
+        <Box width={"fit-content"} p={2} bg="a4borange" borderRadius={15}>
+          <HStack>
+            <Text fontSize="sm" textColor={"white"}>
+              {monthNames[date.getMonth()]}
+            </Text>
+            <Text fontSize="sm" textColor={"white"}>
+              {date.getFullYear()}
+            </Text>
+          </HStack>
+        </Box>
       </Box>
     </HStack>
   );

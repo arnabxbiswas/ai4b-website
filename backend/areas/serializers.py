@@ -1,5 +1,5 @@
 from rest_framework.serializers import ModelSerializer
-from .models import Dataset, Tool, Model,News
+from .models import Dataset, Tool, Model,News,ModelFeedback,Publication
 
 
 class DatasetSerializer(ModelSerializer):
@@ -15,9 +15,13 @@ class DatasetSerializer(ModelSerializer):
             "paper_link",
             "website_link",
             "github_link",
-            "hf_id",
+            "hf_link",
         ]
 
+class ModelFeedbackSerializer(ModelSerializer):
+    class Meta:
+        model = ModelFeedback
+        fields = ['id','serviceId','task','modelInput','modelResponse','comment','liked','postedOn','sourceLanguage','targetLanguage','domain']
 
 class ModelSerializer(ModelSerializer):
     class Meta:
@@ -30,10 +34,15 @@ class ModelSerializer(ModelSerializer):
             "conference",
             "description",
             "paper_link",
+            "colab_link",
             "website_link",
             "github_link",
             "service_id",
-            "hf_id",
+            "hf_link",
+            "installation_steps_json",
+            "usage_steps_json",
+            "testimonials_json",
+            "latest"
         ]
 
 
@@ -60,5 +69,21 @@ class NewsSerializer(ModelSerializer):
             "title",
             "description",
             "published_on",
-            "image"
+            "image",
+            "related_link",
+            "markdown_content"
         ]
+
+class PublicationSerializer(ModelSerializer):
+    model = ModelSerializer(many=True)
+    dataset = DatasetSerializer(many=True)
+    class Meta:
+        model = Publication
+        fields = [
+            "id",
+            "title",
+            "model",
+            "dataset",
+        ]
+
+
