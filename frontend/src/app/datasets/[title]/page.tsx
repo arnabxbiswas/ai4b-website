@@ -14,6 +14,7 @@ export default function Dataset({ params }: { params: { title: string } }) {
         title={`${params.title}`}
         width="100%"
         height={2000}
+        name={Date.now().toString()}
       />
     );
   } else if (params.title.includes("indicvoices")) {
@@ -23,6 +24,7 @@ export default function Dataset({ params }: { params: { title: string } }) {
         title={`${params.title}`}
         width="100%"
         height={2000}
+        name={Date.now().toString()}
       />
     );
   } else if (params.title.includes("bpcc")) {
@@ -32,6 +34,7 @@ export default function Dataset({ params }: { params: { title: string } }) {
         title={`${params.title}`}
         width="100%"
         height={2000}
+        name={Date.now().toString()}
       />
     );
   } else {
@@ -41,6 +44,7 @@ export default function Dataset({ params }: { params: { title: string } }) {
         title={`${params.title}`}
         width="100%"
         height={2000}
+        name={Date.now().toString()}
       />
     );
   }

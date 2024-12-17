@@ -12,6 +12,7 @@ export default function Standalone({ params }: { params: { title: string } }) {
         title={`${params.title}`}
         width="100%"
         height={1200}
+        name={Date.now().toString()}
       />
     );
   } else {
