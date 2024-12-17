@@ -25,6 +25,15 @@ export default function Dataset({ params }: { params: { title: string } }) {
         height={2000}
       />
     );
+  } else if (params.title.includes("bpcc")) {
+    return (
+      <iframe
+        src={"https://bpcc.ai4bharat.org/"}
+        title={`${params.title}`}
+        width="100%"
+        height={2000}
+      />
+    );
   } else {
     return (
       <iframe
