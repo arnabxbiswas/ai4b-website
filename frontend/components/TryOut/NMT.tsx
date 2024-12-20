@@ -1,6 +1,9 @@
 "use client";
 import { API_URL, LANGUAGE_CODE_NAMES } from "@/app/config";
-import { IndicTransliterate } from "@ai4bharat/indic-transliterate";
+import {
+  IndicTransliterate,
+  IndicTransliterateProps,
+} from "@ai4bharat/indic-transliterate";
 import {
   Button,
   Card,
@@ -51,6 +54,13 @@ const fetchTranslation = async ({
 interface LanguageCodeNames {
   [key: string]: string;
 }
+
+interface CustomIndicTransliterateProps extends IndicTransliterateProps {
+  customApiURL?: string;
+}
+
+const CustomIndicTransliterate =
+  IndicTransliterate as React.ComponentType<CustomIndicTransliterateProps>;
 
 export default function NMT({ services }: { services: any }) {
   const [service, setService] = useState(Object.keys(services)[0]);
@@ -156,7 +166,7 @@ export default function NMT({ services }: { services: any }) {
             </VStack>
           </VStack>
           <VStack w={"full"}>
-            <IndicTransliterate
+            <CustomIndicTransliterate
               customApiURL={"https://xlit-api1.ai4bharat.org/tl/"}
               enabled={sourceLanguage !== "en" && transliteration}
               renderComponent={(props) => <Textarea {...props} />}

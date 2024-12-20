@@ -18,7 +18,10 @@ import {
 import { LANGUAGE_CODE_NAMES } from "@/app/config";
 import axios from "axios";
 import { API_URL } from "@/app/config";
-import { IndicTransliterate } from "@ai4bharat/indic-transliterate";
+import {
+  IndicTransliterate,
+  IndicTransliterateProps,
+} from "@ai4bharat/indic-transliterate";
 import { useToast } from "@chakra-ui/react";
 import Feedback from "../Feedback";
 
@@ -57,6 +60,13 @@ const fetchAudio = async ({
 interface LanguageCodeNames {
   [key: string]: string;
 }
+
+interface CustomIndicTransliterateProps extends IndicTransliterateProps {
+  customApiURL?: string;
+}
+
+const CustomIndicTransliterate =
+  IndicTransliterate as React.ComponentType<CustomIndicTransliterateProps>;
 
 export default function TTS({ services }: { services: any }) {
   const [service, setService] = useState(Object.keys(services)[0]);
@@ -171,7 +181,7 @@ export default function TTS({ services }: { services: any }) {
             </VStack>
           </VStack>
           <VStack w={"full"}>
-            <IndicTransliterate
+            <CustomIndicTransliterate
               customApiURL={"https://xlit-api1.ai4bharat.org/tl/"}
               enabled={sourceLanguage !== "en" && transliteration}
               renderComponent={(props) => <Textarea w={344} {...props} />}
