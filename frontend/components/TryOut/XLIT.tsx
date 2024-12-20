@@ -128,7 +128,7 @@ export default function XLIT({ services }: { services: any }) {
           </VStack>
           <VStack w={"full"}>
             <IndicTransliterate
-              customApiURL="https://xlit-api1.ai4bharat.org/tl/"
+              customApiURL={"https://xlit-api1.ai4bharat.org/tl/"}
               enabled={sourceLanguage !== "en"}
               renderComponent={(props) => <Textarea {...props} />}
               value={inputText}

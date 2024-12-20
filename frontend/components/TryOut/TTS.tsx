@@ -172,7 +172,7 @@ export default function TTS({ services }: { services: any }) {
           </VStack>
           <VStack w={"full"}>
             <IndicTransliterate
-              customApiURL="https://xlit-api1.ai4bharat.org/tl/"
+              customApiURL={"https://xlit-api1.ai4bharat.org/tl/"}
               enabled={sourceLanguage !== "en" && transliteration}
               renderComponent={(props) => <Textarea w={344} {...props} />}
               value={inputText}
