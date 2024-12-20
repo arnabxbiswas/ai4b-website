@@ -16,13 +16,23 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import { LANGUAGE_CODE_NAMES } from "@/app/config";
-import { IndicTransliterate } from "@ai4bharat/indic-transliterate";
+import {
+  IndicTransliterate,
+  IndicTransliterateProps,
+} from "@ai4bharat/indic-transliterate";
 import axios from "axios";
 import { API_URL } from "@/app/config";
 
 interface LanguageCodeNames {
   [key: string]: string;
 }
+
+interface CustomIndicTransliterateProps extends IndicTransliterateProps {
+  customApiURL?: string;
+}
+
+const CustomIndicTransliterate =
+  IndicTransliterate as React.ComponentType<CustomIndicTransliterateProps>;
 
 const fetchTransliteration = async ({
   sourceLanguage,
@@ -127,7 +137,8 @@ export default function XLIT({ services }: { services: any }) {
             </Select> */}
           </VStack>
           <VStack w={"full"}>
-            <IndicTransliterate
+            <CustomIndicTransliterate
+              customApiURL={"https://xlit-api1.ai4bharat.org/tl/"}
               enabled={sourceLanguage !== "en"}
               renderComponent={(props) => <Textarea {...props} />}
               value={inputText}
