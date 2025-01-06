@@ -20,9 +20,21 @@ export async function generateStaticParams() {
     });
   });
 
+  params.push({
+    article: "indicvoices",
+  });
+
   return params;
 }
 
+const blogIdMap = {
+  indicvoices: 8,
+};
+
 export default function News({ params }: { params: { article: string } }) {
-  return <ArticleComponent slug={params.article} />;
+  if (params.article.includes("indicvoices")) {
+    return <ArticleComponent slug={"8"} />;
+  } else {
+    return <ArticleComponent slug={params.article} />;
+  }
 }
