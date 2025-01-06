@@ -12,6 +12,7 @@ import {
   Box,
   Image,
   Code,
+  UnorderedList,
 } from "@chakra-ui/react";
 import { useQuery } from "react-query";
 import { API_URL } from "@/app/config";
@@ -71,7 +72,7 @@ const newTheme = {
   p: (props: any) => {
     const { children } = props;
     return (
-      <Text mb={10} fontSize={"xl"}>
+      <Text mb={10} fontSize={"lg"}>
         {children}
       </Text>
     );
@@ -83,6 +84,10 @@ const newTheme = {
         {children}
       </Code>
     );
+  },
+  ul: (props: any) => {
+    const { children } = props;
+    return <UnorderedList mb={3}>{children}</UnorderedList>;
   },
 };
 
