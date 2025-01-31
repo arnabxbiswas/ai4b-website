@@ -20,6 +20,7 @@ class Area(models.TextChoices):
 class Dataset(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=500)
+    paper_award = models.CharField(max_length=500,null=True,blank=True)
     area = models.CharField(choices=Area.choices, max_length=10)
     published_on = models.DateField(default=date.today)
     conference = models.CharField(max_length=20, null=True, blank=True)
@@ -54,6 +55,7 @@ class ModelFeedback(models.Model):
 class Model(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=500)
+    paper_award = models.CharField(max_length=500,null=True,blank=True)
     area = models.CharField(choices=Area.choices, max_length=10)
     published_on = models.DateField(default=date.today)
     latest = models.BooleanField(default=False)

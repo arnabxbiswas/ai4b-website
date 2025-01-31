@@ -15,7 +15,7 @@ class DatasetSerializer(ModelSerializer):
             "paper_link",
             "website_link",
             "github_link",
-            "hf_link",
+            "hf_link","paper_award"
         ]
 
 class ModelFeedbackSerializer(ModelSerializer):
@@ -42,7 +42,7 @@ class ModelSerializer(ModelSerializer):
             "installation_steps_json",
             "usage_steps_json",
             "testimonials_json",
-            "latest"
+            "latest","paper_award"
         ]
 
 
@@ -83,7 +83,7 @@ class PublicationSerializer(ModelSerializer):
             "id",
             "title",
             "model",
-            "dataset",
+            "dataset"
         ]
 
 
