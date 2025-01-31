@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 # Register your models here.
-from .models import Dataset, Tool, Model,News,ModelFeedback,Publication
+from .models import Dataset, Tool, Model,News,ModelFeedback,Publication,License
 
 from import_export import resources
 
@@ -15,6 +15,9 @@ class FeedbackResource(resources.ModelResource):
 
 class NewsAdmin(admin.ModelAdmin):
     search_fields=["title"]
+    
+class LicenseAdmin(admin.ModelAdmin):
+    search_fields=["license_name"]
 
 class ModelFeedbackAdmin(ImportExportModelAdmin):
     resource_classes = [FeedbackResource]
@@ -44,3 +47,4 @@ admin.site.register(Model, ModelAdmin)
 admin.site.register(News,NewsAdmin)
 admin.site.register(ModelFeedback,ModelFeedbackAdmin)
 admin.site.register(Publication,PublicationAdmin)
+admin.site.register(License,LicenseAdmin)

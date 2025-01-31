@@ -79,6 +79,7 @@ class Model(models.Model):
     installation_steps_json = models.JSONField(null=True,blank=True)
     usage_steps_json = models.JSONField(null=True,blank=True)
     testimonials_json = models.JSONField(null=True,blank=True)
+    license = models.ManyToManyField(License,null=True,blank=True)
     
 
     def __str__(self) -> str:
