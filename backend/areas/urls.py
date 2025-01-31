@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from areas import views
 from django.conf.urls.static import static
 from django.conf import settings
-from .views import PublicationViewSet, PublicationFilterOptions, AreaViewSet,translate,transcribe,convertToAudio
+from .views import PublicationViewSet, PublicationFilterOptions, AreaViewSet,translate,transcribe,convertToAudio,translate_triton
 
 
 
@@ -12,7 +12,6 @@ router = DefaultRouter()
 router.register(r"datasets", views.DatasetViewSet)
 router.register(r"news",views.NewsViewSet)
 router.register(r"feedback",views.ModelFeedbackViewSet)
-router.register(r"pubs",views.PubViewSet)
 # Do not register the ToolViewSet with the router, as we need custom routes
 
 # The API URLs are now determined automatically by the router.
@@ -40,6 +39,11 @@ urlpatterns = [
         "publications/",
         PublicationViewSet.as_view({"get": "list"}),
         name="publication-list",
+    ),
+    path(
+        "pubs/",
+        views.PubViewSet.as_view({"get":"list"}),
+        name="publications-list",
     ),
     path(
         "area/<str:area>/",

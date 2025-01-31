@@ -9,6 +9,7 @@ import base64
 import subprocess
 import shutil
 import httpx
+import json
 
 timeout = httpx.Timeout(None, read=None)
 
@@ -30,6 +31,53 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import numpy as np
+import tritonclient.http as http_client
+from tritonclient.utils import *
+
+ENABLE_SSL = True
+ENDPOINT_URL = "indic-trans2.centralindia.inference.ml.azure.com"
+HTTP_HEADERS = {"Authorization": "Bearer BsLFQg1wANAh98U6g8ulwwjH4IAuEZS4"}
+
+# Connect to the server
+if ENABLE_SSL:
+    import gevent.ssl
+
+    triton_http_client = http_client.InferenceServerClient(
+        url=ENDPOINT_URL,
+        verbose=False,
+        ssl=True,
+        ssl_context_factory=gevent.ssl._create_default_https_context,
+    )
+else:
+    triton_http_client = http_client.InferenceServerClient(
+        url=ENDPOINT_URL,
+        verbose=False,
+    )
+
+# print(
+#     "Is server ready - {}".format(
+#         triton_http_client.is_server_ready(headers=HTTP_HEADERS)
+#     )
+# )
+
+
+def get_string_tensor(string_values, tensor_name):
+    string_obj = np.array(string_values, dtype="object")
+    input_obj = http_client.InferInput(
+        tensor_name, string_obj.shape, np_to_triton_dtype(string_obj.dtype)
+    )
+    input_obj.set_data_from_numpy(string_obj)
+    return input_obj
+
+
+def get_translation_input_for_triton(texts: list, src_lang: str, tgt_lang: str):
+    return [
+        get_string_tensor([[text] for text in texts], "INPUT_TEXT"),
+        get_string_tensor([[src_lang]] * len(texts), "INPUT_LANGUAGE_ID"),
+        get_string_tensor([[tgt_lang]] * len(texts), "OUTPUT_LANGUAGE_ID"),
+    ]
+
 def fetchDhruvaServiceInfo(serviceId):
     try:
         dhruvaServiceInfo = requests.post(os.getenv("DHRUVA_MODEL_VIEW_URL"),
@@ -45,6 +93,55 @@ def fetchDhruvaServiceInfo(serviceId):
         return {}
 
 ## Inference Views
+@ratelimit(key='ip', rate='15/m', method='POST')
+@apv(["POST"])
+@permission_classes((permissions.AllowAny,))
+async def translate_triton(request):
+    body = request.data
+    src_lang = body["sourceLanguage"]
+    tgt_lang = body["targetLanguage"]
+    input_sentence = body["input"]
+    input_sentences = [input_sentence]
+    
+    inputs = get_translation_input_for_triton(input_sentences, src_lang, tgt_lang)
+    output0 = http_client.InferRequestedOutput("OUTPUT_TEXT")
+
+    # Send request
+    try:
+        response = triton_http_client.infer(
+            "nmt",
+            model_version="1",
+            inputs=inputs,
+            outputs=[output0],
+            headers=HTTP_HEADERS,
+        )  # .get_response()
+        
+        
+
+        # Decode the response
+        output_batch = response.as_numpy("OUTPUT_TEXT").tolist()
+        
+        result_translation = []
+        
+        for input_sentence, translation in zip(input_sentences, output_batch):
+            translation_output = translation[0].decode("utf-8")
+            response_obj = {
+                            "taskType": "translation",
+                            "output": [
+                                {
+                                    "source": input_sentence,
+                                    "target": translation_output
+                                }
+                            ],
+                            "config": None
+                            }
+            result_translation.append(response_obj)
+        
+        return Response(result_translation[0], status=status.HTTP_200_OK)
+    except Exception as e:
+        print(e)
+        return Response({"message": "Inference Failed"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+         
 @ratelimit(key='ip', rate='15/m', method='POST')
 @apv(["POST"])
 @permission_classes((permissions.AllowAny,))
@@ -146,6 +243,8 @@ async def transcribe(request):
     os.remove(webmPath)
     os.remove(wavPath)
     if inferenceResult.status_code!=200:
+        with open(f"/home/ai4bharat/ai4b-website/backend/media/logs/{wavUUID}.json","w") as fp:
+            json.dump(inferenceResult.json(),fp)
         return Response({"message":"Inference Failed"},status=status.HTTP_503_SERVICE_UNAVAILABLE)
     else:
         return Response(inferenceResult.json(),status=status.HTTP_200_OK)
@@ -201,6 +300,36 @@ class NewsViewSet(viewsets.ModelViewSet):
 class PubViewSet(viewsets.ModelViewSet):
     queryset = Publication.objects.all()
     serializer_class = PublicationSerializer
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        publications = serializer.data
+        formatted_publications = []
+        for publication in publications:
+            new_publication = {}
+            new_publication["id"] = publication["id"]
+            new_publication["title"] = publication["title"]
+            if len(publication["model"])!=0:
+                new_publication["paper_link"] = publication["model"][0]["paper_link"]
+                if "paper_award" in publication["model"][0]:
+                    new_publication["paper_award"] = publication["model"][0]["paper_award"]
+                new_publication["area"] = publication["model"][0]["area"]
+                new_publication["conference"] = publication["model"][0]["conference"]
+                new_publication["published_on"] = publication["model"][0]["published_on"]
+            if len(publication["dataset"])!=0:
+                new_publication["paper_link"] = publication["dataset"][0]["paper_link"]
+                if "paper_award" in publication["dataset"][0]:
+                    new_publication["paper_award"] = publication["dataset"][0]["paper_award"]
+                new_publication["area"] = publication["dataset"][0]["area"]
+                new_publication["conference"] = publication["dataset"][0]["conference"]
+                new_publication["published_on"] = publication["dataset"][0]["published_on"]
+            new_publication["model"] = publication["model"]
+            new_publication["dataset"] = publication["dataset"]
+            formatted_publications.append(new_publication)
+        
+        formatted_publications.sort(key=lambda pub: pub.get("published_on"),reverse=True)
+        return Response(formatted_publications)
 
 def val2Bool(val):
     if val=="true":
@@ -289,7 +418,7 @@ class ModelViewSet(viewsets.ModelViewSet):
         models = serializer.data
         return Response(models)
     
-    @method_decorator(cache_page(60*15))
+    @method_decorator(cache_page(60*150))
     def retrieve(self, request, *args, **kwargs):
 
         
@@ -411,7 +540,6 @@ class ToolViewSet(viewsets.ModelViewSet):
 
 @permission_classes((permissions.AllowAny,))
 class PublicationFilterOptions(viewsets.ViewSet):
-    @method_decorator(cache_page(60*15))
     def list(self, request, *args, **kwargs):
 
         areas = []
