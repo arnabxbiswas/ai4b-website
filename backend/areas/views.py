@@ -37,7 +37,8 @@ from tritonclient.utils import *
 
 ENABLE_SSL = True
 ENDPOINT_URL = "indic-trans2.centralindia.inference.ml.azure.com"
-HTTP_HEADERS = {"Authorization": "Bearer BsLFQg1wANAh98U6g8ulwwjH4IAuEZS4"}
+DHRUVA_TRANSLATION_BEARER = os.getenv('DHRUVA_TRANSLATION_BEARER')
+HTTP_HEADERS = {"Authorization": f"Bearer {DHRUVA_TRANSLATION_BEARER}"}
 
 # Connect to the server
 if ENABLE_SSL:
