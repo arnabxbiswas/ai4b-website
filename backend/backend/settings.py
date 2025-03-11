@@ -15,7 +15,7 @@ import os
 
 from dotenv import load_dotenv
 
-load_dotenv(dotenv_path="/home/ai4bharat/ai4b-website/backend/.env")
+load_dotenv(dotenv_path="/home/azure/ai4b-website/backend/.env")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,12 +25,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["localhost","admin.models.ai4bharat.org","test.ai4bharat.org","ai4bharat.iitm.ac.in"]
+ALLOWED_HOSTS = ["localhost","admin.models.ai4bharat.org","ai4bharat.iitm.ac.in"]
 
 TIME_ZONE = "Asia/Kolkata"
 
@@ -67,7 +67,9 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "backend.get_ip.reverse_proxy"
 ]
-CORS_ALLOWED_ORIGINS = ["http://localhost:3000"]
+
+
+
 
 ROOT_URLCONF = "backend.urls"
 

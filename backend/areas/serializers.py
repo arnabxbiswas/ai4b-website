@@ -1,8 +1,15 @@
 from rest_framework.serializers import ModelSerializer
-from .models import Dataset, Tool, Model,News,ModelFeedback,Publication
+from .models import Dataset, Tool, Model,News,ModelFeedback,Publication,License
 
+class LicenseSerializer(ModelSerializer):
+    class Meta:
+        model = License
+        fields = [
+            "id","license_name","liense_url"
+        ]
 
 class DatasetSerializer(ModelSerializer):
+    license = LicenseSerializer(many=True)
     class Meta:
         model = Dataset
         fields = [
@@ -15,7 +22,7 @@ class DatasetSerializer(ModelSerializer):
             "paper_link",
             "website_link",
             "github_link",
-            "hf_link",
+            "hf_link","paper_award","license"
         ]
 
 class ModelFeedbackSerializer(ModelSerializer):
@@ -23,7 +30,10 @@ class ModelFeedbackSerializer(ModelSerializer):
         model = ModelFeedback
         fields = ['id','serviceId','task','modelInput','modelResponse','comment','liked','postedOn','sourceLanguage','targetLanguage','domain']
 
+
+        
 class ModelSerializer(ModelSerializer):
+    license = LicenseSerializer(many=True)
     class Meta:
         model = Model
         fields = [
@@ -42,7 +52,7 @@ class ModelSerializer(ModelSerializer):
             "installation_steps_json",
             "usage_steps_json",
             "testimonials_json",
-            "latest"
+            "latest","paper_award","license"
         ]
 
 
@@ -83,7 +93,7 @@ class PublicationSerializer(ModelSerializer):
             "id",
             "title",
             "model",
-            "dataset",
+            "dataset"
         ]
 
 

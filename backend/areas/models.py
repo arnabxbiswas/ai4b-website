@@ -14,12 +14,21 @@ class Area(models.TextChoices):
     TTS = "TTS"
     XLIT = "XLIT"
     LLM = "LLM"
+    
+class License(models.Model):
+    id = models.AutoField(primary_key=True)
+    license_name = models.CharField(max_length=500)
+    liense_url = models.URLField(max_length=500)
+    
+    def __str__(self) -> str:
+        return f"{self.license_name}"
 
 
 # Create your models here.
 class Dataset(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=500)
+    paper_award = models.CharField(max_length=500,null=True,blank=True)
     area = models.CharField(choices=Area.choices, max_length=10)
     published_on = models.DateField(default=date.today)
     conference = models.CharField(max_length=20, null=True, blank=True)
@@ -28,6 +37,7 @@ class Dataset(models.Model):
     website_link = models.URLField(max_length=500, null=True, blank=True)
     github_link = models.URLField(max_length=500,null=True,blank=True)
     hf_link = models.URLField(max_length=500,null=True,blank=True)
+    license = models.ManyToManyField(License,null=True,blank=True)
 
     def __str__(self) -> str:
         return f"{self.title}"
@@ -54,6 +64,7 @@ class ModelFeedback(models.Model):
 class Model(models.Model):
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=500)
+    paper_award = models.CharField(max_length=500,null=True,blank=True)
     area = models.CharField(choices=Area.choices, max_length=10)
     published_on = models.DateField(default=date.today)
     latest = models.BooleanField(default=False)
@@ -68,6 +79,8 @@ class Model(models.Model):
     installation_steps_json = models.JSONField(null=True,blank=True)
     usage_steps_json = models.JSONField(null=True,blank=True)
     testimonials_json = models.JSONField(null=True,blank=True)
+    license = models.ManyToManyField(License,null=True,blank=True)
+    
 
     def __str__(self) -> str:
         return f"{self.title}"
