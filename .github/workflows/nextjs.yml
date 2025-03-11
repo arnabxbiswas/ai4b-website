@@ -29,6 +29,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Navigate to frontend directory
+        run: cd frontend
+
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
