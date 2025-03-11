@@ -46,7 +46,9 @@ jobs:
           cache-dependency-path: frontend/${{ steps.detect-package-manager.outputs.manager == 'yarn' && 'yarn.lock' || 'package-lock.json' }}
 
       - name: Install dependencies
-        run: pnpm install
+        run: |
+          cd frontend
+          pnpm install
 
       - name: Setup Pages
         id: setup_pages
@@ -62,7 +64,9 @@ jobs:
             ${{ runner.os }}-nextjs-${{ hashFiles('frontend/**/package-lock.json', 'frontend/**/yarn.lock') }}-
 
       - name: Build with Next.js
-        run: pnpm run build
+        run: |
+          cd frontend
+          pnpm run build
         env:
           PAGES_BASE_PATH: ${{ steps.setup_pages.outputs.base_path }}
 
