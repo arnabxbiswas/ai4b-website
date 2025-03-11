@@ -42,8 +42,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: "pnpm"
-          
+          cache: ${{ steps.detect-package-manager.outputs.manager }}
+          cache-dependency-path: frontend/${{ steps.detect-package-manager.outputs.manager == 'yarn' && 'yarn.lock' || 'package-lock.json' }}
 
       - name: Install dependencies
         run: pnpm install
