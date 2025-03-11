@@ -30,7 +30,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS=['*']
+ALLOWED_HOSTS = ["localhost","admin.models.ai4bharat.org","ai4bharat.iitm.ac.in"]
 
 TIME_ZONE = "Asia/Kolkata"
 
