@@ -1,4 +1,5 @@
 import { datasets } from "../config";
+import Moving from "../../../../components/Moving";
 
 export async function generateStaticParams() {
   let params: any[] = datasets;
@@ -7,45 +8,5 @@ export async function generateStaticParams() {
 }
 
 export default function Dataset({ params }: { params: { title: string } }) {
-  if (params.title.includes("rasa")) {
-    return (
-      <iframe
-        src={"https://rasa.ai4bharat.org/"}
-        title={`${params.title}`}
-        width="100%"
-        height={2000}
-        name={Date.now().toString()}
-      />
-    );
-  } else if (params.title.includes("indicvoices")) {
-    return (
-      <iframe
-        src={"https://indicvoices.ai4bharat.org/"}
-        title={`${params.title}`}
-        width="100%"
-        height={2000}
-        name={Date.now().toString()}
-      />
-    );
-  } else if (params.title.includes("bpcc")) {
-    return (
-      <iframe
-        src={"https://bpcc.ai4bharat.org/"}
-        title={`${params.title}`}
-        width="100%"
-        height={2000}
-        name={Date.now().toString()}
-      />
-    );
-  } else {
-    return (
-      <iframe
-        src={`https://datasets.ai4bharat.org/${params.title}`}
-        title={`${params.title}`}
-        width="100%"
-        height={2000}
-        name={Date.now().toString()}
-      />
-    );
-  }
+  return <Moving />;
 }
