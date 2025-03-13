@@ -48,6 +48,7 @@ interface Publication {
   github_link: string;
   colab_link: string;
   website_link: string;
+  service_id: string;
   type: string;
 }
 
@@ -110,6 +111,7 @@ interface CardProps {
   github_link: string;
   website_link: string;
   colab_link: string;
+  service_id: string;
   type: string;
   index: number;
 }
@@ -158,6 +160,7 @@ const Card = ({
   github_link,
   website_link,
   colab_link,
+  service_id,
   type,
   index,
 }: CardProps) => {
@@ -173,6 +176,50 @@ const Card = ({
     rightValue = "unset";
     borderWidthValue = "15px 15px 15px 0";
   }
+
+  const renderViewButton = (
+    type: string,
+    website_link: string,
+    service_id: string | null
+  ) => {
+    if (type === "Model") {
+      if (service_id) {
+        return (
+          <Button
+            as={Link}
+            target="_blank"
+            href={`${imagePrefix}/areas/model/${area}/${title}`}
+            borderColor={"a4borange"}
+            variant={"outline"}
+            color={"a4borange"}
+            fontSize={15}
+          >
+            View Model
+          </Button>
+        );
+      } else {
+        return <></>;
+      }
+    } else {
+      if (website_link) {
+        return (
+          <Button
+            as={Link}
+            target="_blank"
+            href={website_link}
+            borderColor={"a4borange"}
+            variant={"outline"}
+            color={"a4borange"}
+            fontSize={15}
+          >
+            View Dataset
+          </Button>
+        );
+      } else {
+        return <></>;
+      }
+    }
+  };
   return (
     <HStack
       flex={1}
@@ -265,37 +312,7 @@ const Card = ({
             )}
           </HStack>
         </VStack>
-        {type === "Model" ? (
-          <Button
-            as={Link}
-            target="_blank"
-            href={`${imagePrefix}/areas/model/${area}/${title}`}
-            borderColor={"a4borange"}
-            variant={"outline"}
-            color={"a4borange"}
-            fontSize={15}
-          >
-            View Model
-          </Button>
-        ) : (
-          <>
-            {website_link ? (
-              <Button
-                as={Link}
-                target="_blank"
-                href={website_link}
-                borderColor={"a4borange"}
-                variant={"outline"}
-                color={"a4borange"}
-                fontSize={15}
-              >
-                View Dataset
-              </Button>
-            ) : (
-              <></>
-            )}
-          </>
-        )}
+        {renderViewButton(type, website_link, service_id)}
       </Box>
     </HStack>
   );
