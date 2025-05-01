@@ -244,6 +244,7 @@ export function TabbedPeopleSection({
   members: Array<Member>;
 }) {
   const sections = [
+    "PhD",
     "MS",
     "MTech",
     "Dual Degree",
