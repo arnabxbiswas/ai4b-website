@@ -14,6 +14,10 @@ class Area(models.TextChoices):
     TTS = "TTS"
     XLIT = "XLIT"
     LLM = "LLM"
+    SLR = "SLR"
+    NLP = "NLP"
+    NLG = "NLG"
+    NLU = "NLU/PEFT"
     
 class License(models.Model):
     id = models.AutoField(primary_key=True)
