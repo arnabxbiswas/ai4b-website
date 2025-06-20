@@ -14,10 +14,7 @@
 
 # Environment variables
 .env
-virtualenv/
-myvenv/
-venv/
-env/
+
 # IDE files
 .vscode/
 .idea/

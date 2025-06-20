@@ -79,16 +79,9 @@ class NewsSerializer(ModelSerializer):
             "title",
             "description",
             "published_on",
-            "date",
             "image",
             "related_link",
-            "markdown_content",
-            "authors",
-            "affiliations",
-            "publication_links",
-            "sections",
-            "team",
-            "bibtex"
+            "markdown_content"
         ]
 
 class PublicationSerializer(ModelSerializer):
