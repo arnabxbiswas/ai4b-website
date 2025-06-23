@@ -152,6 +152,7 @@ class News(models.Model):
     team = models.JSONField(null=True,blank=True) 
     bibtex = models.TextField(null=True,blank=True)
 
+
     def __str__(self) -> str:
         return f"{self.title}"
 

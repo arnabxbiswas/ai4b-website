@@ -2,6 +2,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
 
+
 import hashlib
 
 import os
@@ -366,7 +367,6 @@ class NewsViewSet(viewsets.ModelViewSet):
             status=status.HTTP_204_NO_CONTENT
         )
 
-       
 
 class PubViewSet(viewsets.ModelViewSet):
     queryset = Publication.objects.all()

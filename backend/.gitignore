@@ -19,6 +19,7 @@ myvenv/
 venv/
 env/
 
+
 # IDE files
 .vscode/
 .idea/
