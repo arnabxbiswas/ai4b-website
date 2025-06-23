@@ -1,5 +1,6 @@
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
+from rest_framework.decorators import action
 
 import hashlib
 
@@ -293,10 +294,79 @@ async def convertToAudio(request):
     else:
         return Response(inference_result.json(), status=status.HTTP_200_OK)
     
-
+@permission_classes((permissions.AllowAny,))
 class NewsViewSet(viewsets.ModelViewSet):
     queryset = News.objects.all()
     serializer_class = NewsSerializer
+
+    @action(detail=False, methods=['post'], url_path='add')
+    def add_news(self, request):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['patch'], url_path='edit')
+    def edit_news(self, request, pk=None):
+        news = self.get_object()
+        serializer = self.get_serializer(news, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    @action(detail=False, methods=['patch'], url_path='edit')
+    def edit_news(self, request):
+        news_id = request.query_params.get('id')
+        if not news_id:
+            return Response(
+                {"error": "ID parameter is required"}, 
+                status=status.HTTP_400_BAD_REQUEST
+             )
+    
+        try:
+            news = News.objects.get(pk=news_id)
+        except News.DoesNotExist:
+            return Response(
+                 {"error": "News item not found"}, 
+                 status=status.HTTP_404_NOT_FOUND
+            )
+    
+        serializer = self.get_serializer(news, data=request.data, partial=True)
+        if serializer.is_valid():
+              serializer.save()
+              return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['delete'], url_path='delete')
+    def delete_news(self, request):
+    # Get ID from query params
+        news_id = request.query_params.get('id')
+    
+        if not news_id:
+            return Response(
+                {"error": "ID parameter is required"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+        try:
+            news = News.objects.get(pk=news_id)
+        except News.DoesNotExist:
+            return Response(
+               {"error": "News item not found"}, 
+               status=status.HTTP_404_NOT_FOUND
+            )
+    
+        if news.image:
+            news.image.delete()
+    
+        news.delete()
+        return Response(
+            {"message": "News item deleted successfully"},
+            status=status.HTTP_204_NO_CONTENT
+        )
+
+       
 
 class PubViewSet(viewsets.ModelViewSet):
     queryset = Publication.objects.all()

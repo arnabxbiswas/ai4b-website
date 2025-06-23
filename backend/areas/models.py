@@ -144,6 +144,13 @@ class News(models.Model):
     image = models.ImageField(upload_to=image_directory_path,null=True,blank=True)
     related_link = models.URLField(max_length=500, null=True, blank=True)
     markdown_content = models.TextField(null=True,blank=True)
+    cover_image=models.JSONField(null=True,blank=True) 
+    authors = models.JSONField(null=True,blank=True) 
+    affiliations = models.JSONField(null=True,blank=True) 
+    publication_links = models.JSONField(null=True,blank=True)  
+    sections = models.JSONField(null=True,blank=True)  
+    team = models.JSONField(null=True,blank=True) 
+    bibtex = models.TextField(null=True,blank=True)
 
     def __str__(self) -> str:
         return f"{self.title}"
