@@ -81,7 +81,14 @@ class NewsSerializer(ModelSerializer):
             "published_on",
             "image",
             "related_link",
-            "markdown_content"
+            "markdown_content",
+            "cover_image",
+            "authors",
+            "affiliations",
+            "publication_links",
+            "sections",
+            "team",
+            "bibtex"
         ]
 
 class PublicationSerializer(ModelSerializer):
