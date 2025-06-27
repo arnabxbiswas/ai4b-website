@@ -32,7 +32,6 @@ interface BlogContentDisplayProps {
   blog: Blog;
 }
 
-// Helper function to estimate reading time
 function getReadingTime(text: string): string {
   const wordsPerMinute = 200;
   const wordCount = text.split(/\s+/).length;
@@ -40,11 +39,9 @@ function getReadingTime(text: string): string {
   return `${minutes} min read`;
 }
 
-// Client Component: Renders the blog content
 export default function BlogContentDisplay({ blog }: BlogContentDisplayProps) {
   const readingTime = getReadingTime(blog.markdown_content);
 
-  // Orange-themed color values for light and dark modes
   const pageBg = useColorModeValue('orange.50', 'gray.900');
   const cardBg = useColorModeValue('white', 'gray.700');
   const textColor = useColorModeValue('gray.700', 'gray.300');
@@ -55,7 +52,6 @@ export default function BlogContentDisplay({ blog }: BlogContentDisplayProps) {
 
   return (
     <Box bg={pageBg} minH="100vh">
-      {/* Header Section */}
       <Box bg={cardBg} borderBottom="1px solid" borderColor={borderColor} py={8} px={4}>
         <Container maxW="container.lg" textAlign="center">
           <VStack spacing={4}>
@@ -79,7 +75,6 @@ export default function BlogContentDisplay({ blog }: BlogContentDisplayProps) {
             <Heading as="h1" size={{ base: 'xl', md: '2xl' }} color={headingColor} mt={4}>
               {blog.title}
             </Heading>
-            {/* ADDED: suppressHydrationWarning to prevent date/time mismatch error */}
             <Text color={textColor} fontSize="md" suppressHydrationWarning>
               Published on{' '}
               {new Date(blog.published_on).toLocaleDateString('en-US', {
@@ -93,31 +88,34 @@ export default function BlogContentDisplay({ blog }: BlogContentDisplayProps) {
         </Container>
       </Box>
 
-      {/* Cover Image Section */}
       {blog.image && (
         <Box my={8}>
           <Container maxW="container.lg">
             <Center>
-              <Image
-                src={blog.image}
-                alt={blog.title}
-                quality={80}
-                priority
-                width={1200}
-                height={600}
-                objectFit="cover"
+              <Box
                 boxShadow="xl"
                 border="2px solid"
-                borderColor={borderColor} // Added orange border to image
-                sizes="(max-width: 768px) 100vw, 800px"
-                style={{ width: '100%', height: 'auto', maxHeight: '600px' }}
-              />
+                borderColor={borderColor}
+                borderRadius="md"
+                overflow="hidden"
+                w="full"
+              >
+                <Image
+                  src={blog.image}
+                  alt={blog.title}
+                  quality={80}
+                  priority
+                  width={1200}
+                  height={600}
+                  style={{ objectFit: "cover", width: '100%', height: 'auto', maxHeight: '600px' }}
+                  sizes="(max-width: 768px) 100vw, 800px"
+                />
+              </Box>
             </Center>
           </Container>
         </Box>
       )}
 
-      {/* Main Content Section */}
       <Container maxW="container.lg" my={12} px={4}>
         <Box
           bg={cardBg}
@@ -127,12 +125,11 @@ export default function BlogContentDisplay({ blog }: BlogContentDisplayProps) {
           borderColor={borderColor}
           boxShadow="xl"
         >
-          {/* CORRECTED: The Button now acts as the Link directly, preventing nested <a> tags */}
           <Button
             as={Link}
             href="/blog"
             variant="ghost"
-            colorScheme="orange" // Changed to orange color scheme
+            colorScheme="orange"
             leftIcon={<Icon as={FaChevronRight} transform="rotate(180deg)" />}
             mb={6}
             size="sm"
@@ -172,7 +169,7 @@ export default function BlogContentDisplay({ blog }: BlogContentDisplayProps) {
 
               blockquote: {
                 borderLeft: '4px solid',
-                borderColor: accentColor, // Orange accent for blockquote
+                borderColor: accentColor,
                 pl: 4,
                 py: 1,
                 my: 6,
@@ -199,14 +196,13 @@ export default function BlogContentDisplay({ blog }: BlogContentDisplayProps) {
                 fontSize: 'sm',
                 my: 6,
                 border: '1px solid',
-                borderColor: borderColor, // Orange border for code blocks
+                borderColor: borderColor,
               },
               'code:not(pre > code)': {
-                bg: useColorModeValue('orange.50', 'orange.900'), // Orange background for inline code
+                bg: useColorModeValue('orange.50', 'orange.900'),
                 px: 1.5,
                 py: 0.5,
                 borderRadius: 'sm',
-                
                 fontSize: 'sm',
                 color: useColorModeValue('orange.700', 'orange.200'),
               },
@@ -224,12 +220,12 @@ export default function BlogContentDisplay({ blog }: BlogContentDisplayProps) {
               },
               'th, td': {
                 border: '1px solid',
-                borderColor: borderColor, // Orange borders for tables
+                borderColor: borderColor,
                 p: 3,
                 textAlign: 'left',
               },
               th: {
-                bg: useColorModeValue('orange.100', 'orange.800'), // Orange background for table headers
+                bg: useColorModeValue('orange.100', 'orange.800'),
                 fontWeight: 'semibold',
               },
             }}
