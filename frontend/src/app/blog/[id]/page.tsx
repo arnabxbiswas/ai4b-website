@@ -15,9 +15,21 @@ interface Blog {
   cover_image?: { src: string; alt: string; caption?: string } | null;
   authors?: Array<{ name: string; affiliationId?: string }>;
   affiliations?: Array<{ id: string; name: string }>;
-  publication_links?: Array<{ text: string; url: string; icon?: string }>;
-  sections?: Array<any>;
-  team?: { students?: Array<{ name: string }>; advisors?: Array<{ name: string }>; contacts?: Array<{ name: string; email?: string }> };
+  publication_links?: Array<{ text: string; url: string; icon?: string }> | null;
+  sections?: Array<{
+    type: string;
+    heading?: string;
+    content?: string;
+    headers?: string[];
+    rows?: string[][];
+    items?: Array<{ id: string; prompt: string; response: string }>;
+    image?: { src: string; alt?: string; caption?: string };
+  }>;
+  team?: {
+    students?: Array<{ name: string }>;
+    advisors?: Array<{ name: string }>;
+    contacts?: Array<{ name: string; email?: string }>;
+  };
   bibtex?: string;
 }
 
@@ -37,7 +49,8 @@ async function getBlogPost(id: string): Promise<Blog> {
     if (res.status === 404) notFound();
     throw new Error('Failed to fetch blog post');
   }
-  return res.json();
+  const data = await res.json();
+  return data;
 }
 
 export async function generateStaticParams() {
@@ -53,14 +66,14 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     openGraph: {
       title: blog.title,
       description: blog.description,
-      images: blog.image || (blog.cover_image?.src ? [blog.cover_image.src] : []),
+      images: blog.image ? [blog.image] : (blog.cover_image?.src ? [blog.cover_image.src] : []),
       url: `https://ai4bharat.iitm.ac.in/blog/${blog.id}`,
     },
     twitter: {
       card: 'summary_large_image',
       title: blog.title,
       description: blog.description,
-      images: blog.image || (blog.cover_image?.src ? [blog.cover_image.src] : []),
+      images: blog.image ? [blog.image] : (blog.cover_image?.src ? [blog.cover_image.src] : []),
     },
   };
 }
