@@ -79,7 +79,6 @@ interface Blog {
 const MotionBox = motion(Box);
 const MotionContainer = motion(Container);
 
-// Utility functions
 function getReadingTime(content: string): string {
   const wordsPerMinute = 225;
   const wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
@@ -95,7 +94,6 @@ function formatDate(dateString: string): string {
   });
 }
 
-// Enhanced Loading Skeleton
 function BlogCardSkeleton() {
   const cardBg = useColorModeValue("white", "gray.700");
   const borderColor = useColorModeValue("orange.100", "orange.800");
@@ -130,7 +128,6 @@ function BlogCardSkeleton() {
   );
 }
 
-// Enhanced Search and Filter Component
 function SearchAndFilter({ 
   searchTerm, 
   onSearchChange, 
@@ -190,7 +187,6 @@ function SearchAndFilter({
   );
 }
 
-// Enhanced Blog Card Component
 function BlogCard({ blog, index }: { blog: Blog; index: number }) {
   const shouldReduceMotion = useReducedMotion();
   const [imageError, setImageError] = useState(false);
@@ -468,8 +464,8 @@ export default function BlogsPage() {
     ["fetchBlogList"],
     fetchBlogList,
     {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      cacheTime: 10 * 60 * 1000, // 10 minutes
+      staleTime: 5 * 60 * 1000, 
+      cacheTime: 10 * 60 * 1000,
       onError: () => {
         toast({
           title: "Failed to load articles",
@@ -482,7 +478,6 @@ export default function BlogsPage() {
     }
   );
 
-  // Enhanced filtering logic
   const filteredBlogs = useMemo(() => {
     if (!blogList) return [];
     if (!searchTerm.trim()) return blogList;
