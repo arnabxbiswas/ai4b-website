@@ -88,7 +88,8 @@ class NewsSerializer(ModelSerializer):
             "publication_links",
             "sections",
             "team",
-            "bibtex"
+            "bibtex",
+            "page_url"
         ]
 
 class PublicationSerializer(ModelSerializer):
