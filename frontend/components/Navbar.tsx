@@ -268,5 +268,6 @@ const NAV_ITEMS: Array<NavItem> = [
   },
   { label: "Publications", href: `${imagePrefix}/publications` },
   { label: "People", href: `${imagePrefix}/people` },
+  { label: "Blog", href: `${imagePrefix}/blog` },
   { label: "Careers", href: `${imagePrefix}/careers` },
 ];
