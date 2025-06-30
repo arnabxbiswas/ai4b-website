@@ -29,6 +29,7 @@ import {
   useToast,
   IconButton,
   Tooltip,
+  AspectRatio,
 } from "@chakra-ui/react";
 import Link from "next/link";
 import Image from "next/image";
@@ -40,10 +41,9 @@ import {
   FaUser, 
   FaArrowRight, 
   FaBookOpen,
-  FaFilter,
   FaTags,
-  FaChevronDown,
-  FaHome
+  FaHome,
+  FaClock
 } from "react-icons/fa";
 import { API_URL } from "../config";
 
@@ -55,6 +55,7 @@ interface Blog {
   image: string | null;
   related_link: string | null;
   markdown_content: string;
+  page_url: string;
   cover_image?: { src: string; alt: string; caption?: string } | null;
   authors?: Array<{ name: string; affiliationId?: string }>;
   affiliations?: Array<{ id: string; name: string }>;
@@ -101,28 +102,30 @@ function BlogCardSkeleton() {
   return (
     <Box
       borderWidth="1px"
-      borderRadius="2xl"
+      borderRadius="xl"
       overflow="hidden"
       bg={cardBg}
       borderColor={borderColor}
-      height="580px"
+      height="auto"
+      minHeight="400px"
       boxShadow="sm"
     >
-      <Skeleton height="240px" borderRadius="0" />
-      <Box p={6} height="340px" display="flex" flexDirection="column" gap={4}>
+      <AspectRatio ratio={16/9}>
+        <Skeleton borderRadius="0" />
+      </AspectRatio>
+      <Box p={6} display="flex" flexDirection="column" gap={4}>
         <HStack justify="space-between">
           <Skeleton height="20px" width="80px" borderRadius="full" />
           <Skeleton height="16px" width="60px" />
         </HStack>
-        <Skeleton height="20px" width="90%" />
-        <Skeleton height="20px" width="70%" />
+        <Skeleton height="24px" width="90%" />
         <VStack spacing={2} align="start" flex={1}>
-          <Skeleton height="14px" width="100%" />
-          <Skeleton height="14px" width="100%" />
-          <Skeleton height="14px" width="80%" />
+          <Skeleton height="16px" width="100%" />
+          <Skeleton height="16px" width="100%" />
+          <Skeleton height="16px" width="80%" />
         </VStack>
         <Skeleton height="16px" width="120px" />
-        <Skeleton height="44px" borderRadius="xl" />
+        <Skeleton height="40px" borderRadius="md" />
       </Box>
     </Box>
   );
@@ -144,18 +147,18 @@ function SearchAndFilter({
   return (
     <Box mb={12}>
       <VStack spacing={6}>
-        <InputGroup maxW="600px" size="lg">
+        <InputGroup maxW="500px" size="lg">
           <InputLeftElement pointerEvents="none">
             <Icon as={FaSearch} color="orange.400" />
           </InputLeftElement>
           <Input
-            placeholder="Search articles by title, description, or author..."
+            placeholder="Search articles..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             bg={inputBg}
             borderColor={borderColor}
-            borderWidth="2px"
-            borderRadius="xl"
+            borderWidth="1px"
+            borderRadius="md"
             fontSize="md"
             _hover={{ borderColor: "orange.300" }}
             _focus={{ 
@@ -170,14 +173,14 @@ function SearchAndFilter({
           <HStack spacing={2}>
             <Icon as={FaBookOpen} />
             <Text fontWeight="medium">
-              {totalCount} {totalCount === 1 ? 'article' : 'articles'} available
+              {totalCount} {totalCount === 1 ? 'article' : 'articles'}
             </Text>
           </HStack>
           {searchTerm && (
             <>
               <Divider orientation="vertical" h="20px" />
               <Text>
-                Searching for: <Text as="span" fontWeight="semibold" color="orange.500">"{searchTerm}"</Text>
+                Results for: <Text as="span" fontWeight="semibold" color="orange.500">"{searchTerm}"</Text>
               </Text>
             </>
           )}
@@ -195,8 +198,7 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
   const borderColor = useColorModeValue("orange.100", "orange.700");
   const textColor = useColorModeValue("gray.600", "gray.300");
   const headingColor = useColorModeValue("gray.800", "white");
-  const hoverBg = useColorModeValue("orange.25", "orange.950");
-  const shadowColor = useColorModeValue("rgba(251, 146, 60, 0.1)", "rgba(251, 146, 60, 0.2)");
+  const hoverBorderColor = useColorModeValue("orange.300", "orange.500");
 
   const readingTime = getReadingTime(blog.markdown_content);
   const authorNames = blog.authors?.map(author => author.name).join(", ") || "AI4Bharat Team";
@@ -204,190 +206,109 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
 
   return (
     <MotionBox
-      initial={shouldReduceMotion ? {} : { opacity: 0, y: 40 }}
+      initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }}
       animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
       transition={{
-        duration: 0.6,
-        delay: index * 0.1,
+        duration: 0.4,
+        delay: index * 0.05,
         ease: "easeOut",
       }}
       whileHover={shouldReduceMotion ? {} : { 
-        y: -8,
-        transition: { duration: 0.3, ease: "easeOut" }
+        y: -4,
+        transition: { duration: 0.2, ease: "easeOut" }
       }}
-      height="580px"
+      height="auto"
     >
       <Box
-        as={Link}
-        href={`/blog/${blog.id}`}
         borderWidth="1px"
         borderColor={borderColor}
-        borderRadius="2xl"
+        borderRadius="xl"
         overflow="hidden"
         bg={cardBg}
-        boxShadow={`0 4px 6px -1px ${shadowColor}, 0 2px 4px -1px ${shadowColor}`}
-        transition="all 0.4s cubic-bezier(0.4, 0, 0.2, 1)"
+        boxShadow="sm"
+        transition="all 0.2s ease"
         _hover={{
-          textDecoration: "none",
-          boxShadow: `0 20px 25px -5px ${shadowColor}, 0 10px 10px -5px ${shadowColor}`,
-          bg: hoverBg,
-          borderColor: "orange.200",
+          boxShadow: "lg",
+          borderColor: hoverBorderColor,
         }}
         height="100%"
         display="flex"
         flexDirection="column"
         position="relative"
-        cursor="pointer"
         role="article"
-        aria-label={`Read article: ${blog.title}`}
       >
-        {/* Enhanced Image Section */}
-        <Box position="relative" overflow="hidden" height="240px" flexShrink={0}>
+        {/* Fixed aspect ratio image section */}
+        <AspectRatio ratio={16/9} bg="orange.50">
           {coverImageSrc && !imageError ? (
-            <>
-              <Image
-                src={coverImageSrc}
-                alt={blog.cover_image?.alt || blog.title}
-                fill
-                style={{
-                  objectFit: 'cover',
-                  objectPosition: 'center',
-                  transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
-                }}
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                className="hover:scale-110"
-                onError={() => setImageError(true)}
-                quality={85}
-              />
-              <Box
-                position="absolute"
-                top={0}
-                left={0}
-                right={0}
-                bottom={0}
-                bgGradient="linear(to-t, blackAlpha.300, transparent)"
-              />
-              {/* Reading time overlay */}
-              <Badge
-                position="absolute"
-                top={4}
-                right={4}
-                colorScheme="orange"
-                variant="solid"
-                fontSize="xs"
-                fontWeight="semibold"
-                px={3}
-                py={1}
-                borderRadius="full"
-                bg="rgba(251, 146, 60, 0.9)"
-                backdropFilter="blur(4px)"
-              >
-                {readingTime}
-              </Badge>
-            </>
+            <Image
+              src={coverImageSrc}
+              alt={blog.cover_image?.alt || blog.title}
+              fill
+              style={{
+                objectFit: 'cover',
+                objectPosition: 'center',
+              }}
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              onError={() => setImageError(true)}
+              quality={75}
+            />
           ) : (
-            <Box
-              height="100%"
-              bgGradient="linear(to-br, orange.100, orange.200)"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              position="relative"
-            >
-              <VStack spacing={3}>
-                <Box
-                  w={16}
-                  h={16}
-                  borderRadius="full"
-                  bg="orange.300"
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                  boxShadow="lg"
-                >
-                  <Icon as={FaBookOpen} fontSize="2xl" color="white" />
-                </Box>
-                <Text color="orange.600" fontSize="sm" fontWeight="semibold">
-                  Research Article
+            <Center bg="orange.50">
+              <VStack spacing={2}>
+                <Icon as={FaBookOpen} fontSize="2xl" color="orange.400" />
+                <Text color="orange.600" fontSize="sm" fontWeight="medium">
+                  Article
                 </Text>
               </VStack>
-              <Badge
-                position="absolute"
-                top={4}
-                right={4}
-                colorScheme="orange"
-                variant="solid"
-                fontSize="xs"
-                fontWeight="semibold"
-                px={3}
-                py={1}
-                borderRadius="full"
-              >
-                {readingTime}
-              </Badge>
-            </Box>
+            </Center>
           )}
-        </Box>
+        </AspectRatio>
 
-        {/* Enhanced Content Section */}
-        <Box 
-          p={6} 
-          display="flex"
-          flexDirection="column"
-          flex={1}
-          gap={4}
-        >
-          {/* Date and Author Info */}
-          <HStack justify="space-between" align="center">
-            <Badge
-              colorScheme="orange"
-              variant="subtle"
-              fontSize="xs"
-              fontWeight="semibold"
-              px={3}
-              py={1}
-              borderRadius="full"
-              display="flex"
-              alignItems="center"
-              gap={1}
-            >
-              <Icon as={FaCalendarAlt} fontSize="xs" />
-              {formatDate(blog.published_on)}
-            </Badge>
-            <Text fontSize="xs" color={textColor} fontWeight="medium">
-              {authorNames.length > 20 ? `${authorNames.substring(0, 20)}...` : authorNames}
-            </Text>
+        {/* Content section with consistent spacing */}
+        <Box p={6} display="flex" flexDirection="column" flex={1}>
+          {/* Metadata with consistent layout */}
+          <HStack justify="space-between" align="center" mb={3}>
+            <HStack spacing={2} fontSize="xs" color={textColor}>
+              <Icon as={FaCalendarAlt} />
+              <Text>{formatDate(blog.published_on)}</Text>
+            </HStack>
+            <HStack spacing={2} fontSize="xs" color={textColor}>
+              <Icon as={FaClock} />
+              <Text>{readingTime}</Text>
+            </HStack>
           </HStack>
 
-          {/* Title */}
+          {/* Title with consistent height */}
           <Heading
             as="h3"
-            fontSize="xl"
-            fontWeight="bold"
+            fontSize="lg"
+            fontWeight="semibold"
             color={headingColor}
             lineHeight="1.3"
+            mb={3}
+            minHeight="2.6em"
+            display="-webkit-box"
             sx={{
-              display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              minHeight: '2.6em',
-              maxHeight: '2.6em'
             }}
           >
             {blog.title}
           </Heading>
 
-          {/* Description */}
+          {/* Description with consistent height */}
           <Text
             fontSize="sm"
             color={textColor}
-            lineHeight="1.6"
+            lineHeight="1.5"
+            mb={4}
             flex={1}
+            minHeight="4.5em"
+            display="-webkit-box"
             sx={{
-              display: '-webkit-box',
-              WebkitLineClamp: 4,
+              WebkitLineClamp: 3,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
               textOverflow: 'ellipsis'
@@ -396,51 +317,28 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
             {blog.description}
           </Text>
 
-          {/* Tags/Categories */}
-          {blog.publication_links && blog.publication_links.length > 0 && (
-            <HStack spacing={2} flexWrap="wrap">
-              <Icon as={FaTags} fontSize="xs" color="orange.400" />
-              {blog.publication_links.slice(0, 2).map((link, idx) => (
-                <Badge
-                  key={idx}
-                  size="sm"
-                  colorScheme="orange"
-                  variant="outline"
-                  fontSize="xs"
-                  borderRadius="md"
-                >
-                  {link.text}
-                </Badge>
-              ))}
-              {blog.publication_links.length > 2 && (
-                <Text fontSize="xs" color={textColor}>
-                  +{blog.publication_links.length - 2} more
-                </Text>
-              )}
-            </HStack>
-          )}
+          {/* Author info */}
+          <Text fontSize="xs" color={textColor} mb={4} fontWeight="medium">
+            By {authorNames.length > 30 ? `${authorNames.substring(0, 30)}...` : authorNames}
+          </Text>
 
-          {/* Enhanced Button */}
+          {/* Single clear CTA with orange theme */}
           <Button
-            bgGradient="linear(to-r, orange.400, orange.500)"
-            color="white"
-            size="md"
-            w="full"
-            borderRadius="xl"
-            fontWeight="semibold"
-            transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+            as={Link}
+            href={`/blog/${blog.page_url || blog.id}`}
+            colorScheme="orange"
+            size="sm"
+            variant="solid"
+            borderRadius="md"
+            fontWeight="medium"
+            rightIcon={<Icon as={FaArrowRight} fontSize="xs" />}
             _hover={{ 
-              bgGradient: "linear(to-r, orange.500, orange.600)",
-              transform: "translateY(-2px)",
-              boxShadow: "0 8px 25px -8px orange.400"
+              transform: shouldReduceMotion ? 'none' : 'translateY(-1px)',
+              boxShadow: "md"
             }}
-            _active={{
-              transform: "translateY(0)",
-            }}
-            rightIcon={<Icon as={FaArrowRight} />}
             mt="auto"
           >
-            Read Full Article
+            Read Article
           </Button>
         </Box>
       </Box>
@@ -493,7 +391,6 @@ export default function BlogsPage() {
   }, [blogList, searchTerm]);
 
   const bgColor = useColorModeValue("orange.50", "gray.900");
-  const cardBgColor = useColorModeValue("white", "gray.700");
   const textColor = useColorModeValue("gray.700", "gray.300");
   const headingColor = useColorModeValue("gray.900", "white");
 
@@ -507,33 +404,30 @@ export default function BlogsPage() {
   if (isLoading) {
     return (
       <Box bg={bgColor} minH="100vh">
-        <Container maxW="7xl" py={20} px={{ base: 6, md: 8 }}>
-          {/* Header */}
-          <VStack spacing={12} align="center" mb={16}>
+        <Container maxW="6xl" py={16} px={{ base: 4, md: 6 }}>
+          <VStack spacing={8} align="center" mb={12}>
             <Heading
               as="h1"
-              fontSize={{ base: "3xl", md: "4xl", lg: "5xl" }}
+              fontSize={{ base: "2xl", md: "3xl", lg: "4xl" }}
               textAlign="center"
-              bgGradient="linear(to-r, orange.400, orange.600, orange.500)"
+              bgGradient="linear(to-r, orange.400, orange.600)"
               bgClip="text"
-              fontWeight="black"
-              letterSpacing="tight"
+              fontWeight="bold"
             >
-              AI4Bharat Blog's            </Heading>
+              AI4Bharat Blog
+            </Heading>
             <Text
-              fontSize={{ base: "lg", md: "xl" }}
-              maxW="4xl"
+              fontSize={{ base: "md", md: "lg" }}
+              maxW="3xl"
               textAlign="center"
               color={textColor}
               lineHeight="relaxed"
-              fontWeight="medium"
             >
-              Discover cutting-edge research, insights, and innovations from the AI4Bharat community
+              Discover cutting-edge research and insights from the AI4Bharat community
             </Text>
           </VStack>
           
-          {/* Loading Skeletons */}
-          <SimpleGrid columns={gridColumns} spacing={8} w="full">
+          <SimpleGrid columns={gridColumns} spacing={6} w="full">
             {Array.from({ length: 6 }).map((_, index) => (
               <BlogCardSkeleton key={index} />
             ))}
@@ -546,7 +440,7 @@ export default function BlogsPage() {
   if (error) {
     return (
       <Box bg={bgColor} minH="100vh">
-        <Container maxW="7xl" py={20}>
+        <Container maxW="6xl" py={16}>
           <Center h="60vh">
             <VStack spacing={6} textAlign="center">
               <Alert
@@ -557,7 +451,7 @@ export default function BlogsPage() {
                 justifyContent="center"
                 textAlign="center"
                 height="200px"
-                borderRadius="xl"
+                borderRadius="lg"
                 maxW="md"
               >
                 <AlertIcon boxSize="40px" mr={0} />
@@ -565,14 +459,14 @@ export default function BlogsPage() {
                   Unable to load articles
                 </AlertTitle>
                 <AlertDescription maxWidth="sm" fontSize="md">
-                  We're having trouble connecting to our servers. Please check your internet connection and try again.
+                  Please check your internet connection and try again.
                 </AlertDescription>
               </Alert>
               <Button
                 colorScheme="orange"
                 onClick={() => refetch()}
                 size="lg"
-                borderRadius="xl"
+                borderRadius="md"
                 leftIcon={<Icon as={FaHome} />}
               >
                 Try Again
@@ -587,61 +481,57 @@ export default function BlogsPage() {
   return (
     <Box bg={bgColor} minH="100vh">
       <MotionContainer 
-        maxW="7xl" 
-        py={20} 
-        px={{ base: 6, md: 8 }}
+        maxW="6xl" 
+        py={16} 
+        px={{ base: 4, md: 6 }}
         initial={shouldReduceMotion ? {} : { opacity: 0 }}
         animate={shouldReduceMotion ? {} : { opacity: 1 }}
-        transition={{ duration: 0.6 }}
+        transition={{ duration: 0.5 }}
       >
-        {/* Enhanced Header */}
-        <VStack spacing={12} align="center" mb={16}>
+        {/* Header with orange gradient */}
+        <VStack spacing={8} align="center" mb={12}>
           <motion.div
-            initial={shouldReduceMotion ? {} : { opacity: 0, y: -30 }}
+            initial={shouldReduceMotion ? {} : { opacity: 0, y: -20 }}
             animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
           >
-            <VStack spacing={4}>
-              <Heading
-                as="h1"
-                fontSize={{ base: "3xl", md: "4xl", lg: "5xl" }}
-                textAlign="center"
-                bgGradient="linear(to-r, orange.400, orange.600, orange.500)"
-                bgClip="text"
-                fontWeight="black"
-                letterSpacing="tight"
-                lineHeight="shorter"
-              >
-                AI4Bharat Blog's              </Heading>
-              <Box w="100px" h="4px" bg="orange.400" borderRadius="full" />
-            </VStack>
+            <Heading
+              as="h1"
+              fontSize={{ base: "2xl", md: "3xl", lg: "4xl" }}
+              textAlign="center"
+              bgGradient="linear(to-r, orange.400, orange.600)"
+              bgClip="text"
+              fontWeight="bold"
+              lineHeight="shorter"
+            >
+              AI4Bharat Blog
+            </Heading>
           </motion.div>
           
           <motion.div
-            initial={shouldReduceMotion ? {} : { opacity: 0, y: 30 }}
+            initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }}
             animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+            transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
           >
             <Text
-              fontSize={{ base: "lg", md: "xl" }}
-              maxW="4xl"
+              fontSize={{ base: "md", md: "lg" }}
+              maxW="3xl"
               textAlign="center"
               color={textColor}
               lineHeight="relaxed"
-              fontWeight="medium"
             >
-              Discover cutting-edge research, insights, and innovations from the AI4Bharat community. 
+              Discover cutting-edge research and insights from the AI4Bharat community. 
               Explore our latest work in AI for Indian languages and beyond.
             </Text>
           </motion.div>
         </VStack>
 
-        {/* Search and Filter */}
+        {/* Search */}
         {blogList && blogList.length > 0 && (
           <motion.div
             initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }}
             animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
           >
             <SearchAndFilter
               searchTerm={searchTerm}
@@ -654,7 +544,7 @@ export default function BlogsPage() {
         {/* Blog Grid */}
         {blogList && blogList.length > 0 ? (
           filteredBlogs.length > 0 ? (
-            <SimpleGrid columns={gridColumns} spacing={8} w="full">
+            <SimpleGrid columns={gridColumns} spacing={6} w="full">
               <AnimatePresence mode="wait">
                 {filteredBlogs.map((blog, index) => (
                   <BlogCard key={blog.id} blog={blog} index={index} />
@@ -664,23 +554,12 @@ export default function BlogsPage() {
           ) : (
             <Center py={20}>
               <VStack spacing={6} textAlign="center">
-                <Box
-                  w={20}
-                  h={20}
-                  borderRadius="full"
-                  bg="orange.100"
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                >
-                  <Icon as={FaSearch} fontSize="3xl" color="orange.400" />
-                </Box>
+                <Icon as={FaSearch} fontSize="4xl" color="orange.400" />
                 <VStack spacing={2}>
                   <Heading size="lg" color={headingColor}>
                     No articles found
                   </Heading>
                   <Text color={textColor} maxW="md">
-                    We couldn't find any articles matching "{searchTerm}". 
                     Try adjusting your search terms or browse all articles.
                   </Text>
                 </VStack>
@@ -688,7 +567,7 @@ export default function BlogsPage() {
                   colorScheme="orange"
                   variant="outline"
                   onClick={() => setSearchTerm("")}
-                  borderRadius="xl"
+                  borderRadius="md"
                 >
                   Clear Search
                 </Button>
@@ -698,24 +577,14 @@ export default function BlogsPage() {
         ) : (
           <Center py={20}>
             <VStack spacing={6} textAlign="center">
-              <Box
-                w={20}
-                h={20}
-                borderRadius="full"
-                bg="orange.100"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-              >
-                <Icon as={FaBookOpen} fontSize="3xl" color="orange.400" />
-              </Box>
+              <Icon as={FaBookOpen} fontSize="4xl" color="orange.400" />
               <VStack spacing={2}>
                 <Heading size="lg" color={headingColor}>
                   Coming Soon
                 </Heading>
                 <Text color={textColor} maxW="md" textAlign="center">
                   We're working on bringing you amazing research content. 
-                  Check back soon for the latest insights and innovations from AI4Bharat.
+                  Check back soon for the latest insights and innovations.
                 </Text>
               </VStack>
             </VStack>

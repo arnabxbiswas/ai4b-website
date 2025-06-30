@@ -32,6 +32,7 @@ interface Blog {
   image: string | null;
   related_link: string | null;
   markdown_content: string;
+  page_url: string;
   cover_image?: { src: string; alt: string; caption?: string } | null;
   authors?: Array<{ name: string; affiliationId?: string }>;
   affiliations?: Array<{ id: string; name: string }>;
