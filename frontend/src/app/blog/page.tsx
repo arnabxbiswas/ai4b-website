@@ -101,20 +101,16 @@ function getReadingTime(content: string, sections?: any[]): string {
   
   let totalText = content || '';
   
-  // Add sections content to total text
   if (sections && Array.isArray(sections)) {
     sections.forEach(section => {
-      // Add heading text
       if (section.heading) {
         totalText += ' ' + section.heading;
       }
       
-      // Add main content
       if (section.content) {
         totalText += ' ' + section.content;
       }
       
-      // Add table content (headers and rows)
       if (section.type === 'table') {
         if (section.headers && Array.isArray(section.headers)) {
           totalText += ' ' + section.headers.join(' ');
@@ -136,35 +132,29 @@ function getReadingTime(content: string, sections?: any[]): string {
   });
 }
       
-      // Add image captions
       if (section.image && section.image.caption) {
         totalText += ' ' + section.image.caption;
       }
     });
   }
   
-  // Handle empty text
   if (!totalText || totalText.trim().length === 0) {
     return "1 min read";
   }
   
-  // Remove markdown formatting and HTML tags for accurate word count
   const cleanText = totalText
-    .replace(/[#*_`~\[\]()]/g, ' ') // Remove markdown symbols
-    .replace(/<[^>]*>/g, ' ') // Remove HTML tags
-    .replace(/\s+/g, ' ') // Normalize whitespace
+    .replace(/[#*_`~\[\]()]/g, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
   
-  // Split by whitespace and filter out empty strings
   const words = cleanText.split(/\s+/).filter(word => word.length > 0);
   const wordCount = words.length;
   
-  // Calculate minutes with ceiling division, minimum 1 minute
   const minutes = Math.max(1, Math.ceil(wordCount / WORDS_PER_MINUTE));
   
   return `${minutes} min read`;
 }
-
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -316,7 +306,6 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
         position="relative"
         role="article"
       >
-        {/* Fixed aspect ratio image section */}
         <AspectRatio ratio={16/9} bg="orange.50">
           {coverImageSrc && !imageError ? (
             <Image
@@ -343,9 +332,7 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
           )}
         </AspectRatio>
 
-        {/* Content section with consistent spacing */}
         <Box p={6} display="flex" flexDirection="column" flex={1}>
-          {/* Metadata with consistent layout */}
           <HStack justify="space-between" align="center" mb={3}>
             <HStack spacing={2} fontSize="xs" color={textColor}>
               <Icon as={FaCalendarAlt} />
@@ -357,7 +344,6 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
             </HStack>
           </HStack>
 
-          {/* Title with consistent height */}
           <Heading
             as="h3"
             fontSize="lg"
@@ -377,7 +363,6 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
             {blog.title}
           </Heading>
 
-          {/* Description with consistent height */}
           <Text
             fontSize="sm"
             color={textColor}
@@ -396,12 +381,10 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
             {blog.description}
           </Text>
 
-          {/* Author info */}
           <Text fontSize="xs" color={textColor} mb={4} fontWeight="medium">
             By {authorNames.length > 30 ? `${authorNames.substring(0, 30)}...` : authorNames}
           </Text>
 
-          {/* Single clear CTA with orange theme */}
           <Button
             as={Link}
             href={`/blog/${blog.page_url || blog.id}`}
@@ -567,7 +550,6 @@ export default function BlogsPage() {
         animate={shouldReduceMotion ? {} : { opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        {/* Header with orange gradient */}
         <VStack spacing={8} align="center" mb={12}>
           <motion.div
             initial={shouldReduceMotion ? {} : { opacity: 0, y: -20 }}
@@ -605,7 +587,6 @@ export default function BlogsPage() {
           </motion.div>
         </VStack>
 
-        {/* Search */}
         {blogList && blogList.length > 0 && (
           <motion.div
             initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }}
@@ -620,7 +601,6 @@ export default function BlogsPage() {
           </motion.div>
         )}
 
-        {/* Blog Grid */}
         {blogList && blogList.length > 0 ? (
           filteredBlogs.length > 0 ? (
             <SimpleGrid columns={gridColumns} spacing={6} w="full">

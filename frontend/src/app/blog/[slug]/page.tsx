@@ -18,7 +18,7 @@ interface Blog {
   affiliations?: Array<{ id: string; name: string }>;
   publication_links?: Array<{ text: string; url: string; icon?: string }> | null;
   sections?: Array<{
-    type: "table" | "image" | "examples" | "markdown"; // ✅ Fixed: Specific string literals instead of generic string
+    type: "table" | "image" | "examples" | "markdown"; 
     heading?: string;
     content?: string;
     headers?: string[];
