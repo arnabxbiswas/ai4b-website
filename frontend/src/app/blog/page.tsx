@@ -80,10 +80,79 @@ interface Blog {
 const MotionBox = motion(Box);
 const MotionContainer = motion(Container);
 
-function getReadingTime(content: string): string {
-  const wordsPerMinute = 225;
-  const wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
-  const minutes = Math.ceil(wordCount / wordsPerMinute);
+function getSectionsArray(sections: any): any[] {
+  if (Array.isArray(sections)) {
+    return sections;
+  }
+  if (typeof sections === 'string') {
+    try {
+      const parsed = JSON.parse(sections);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      console.error('Failed to parse sections:', e);
+      return [];
+    }
+  }
+  return [];
+}
+
+function getReadingTime(content: string, sections?: any[]): string {
+  const WORDS_PER_MINUTE = 225;
+  
+  let totalText = content || '';
+  
+  if (sections && Array.isArray(sections)) {
+    sections.forEach(section => {
+      if (section.heading) {
+        totalText += ' ' + section.heading;
+      }
+      
+      if (section.content) {
+        totalText += ' ' + section.content;
+      }
+      
+      if (section.type === 'table') {
+        if (section.headers && Array.isArray(section.headers)) {
+          totalText += ' ' + section.headers.join(' ');
+        }
+       if (section.rows && Array.isArray(section.rows)) {
+  section.rows.forEach((row: string[]) => {
+    if (Array.isArray(row)) {
+      totalText += ' ' + row.join(' ');
+    }
+  });
+}
+
+      }
+      
+     if (section.type === 'examples' && section.items && Array.isArray(section.items)) {
+  section.items.forEach((item: { id: string; prompt: string; response: string }) => {
+    if (item.prompt) totalText += ' ' + item.prompt;
+    if (item.response) totalText += ' ' + item.response;
+  });
+}
+      
+      if (section.image && section.image.caption) {
+        totalText += ' ' + section.image.caption;
+      }
+    });
+  }
+  
+  if (!totalText || totalText.trim().length === 0) {
+    return "1 min read";
+  }
+  
+  const cleanText = totalText
+    .replace(/[#*_`~\[\]()]/g, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  const words = cleanText.split(/\s+/).filter(word => word.length > 0);
+  const wordCount = words.length;
+  
+  const minutes = Math.max(1, Math.ceil(wordCount / WORDS_PER_MINUTE));
+  
   return `${minutes} min read`;
 }
 
@@ -200,7 +269,7 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
   const headingColor = useColorModeValue("gray.800", "white");
   const hoverBorderColor = useColorModeValue("orange.300", "orange.500");
 
-  const readingTime = getReadingTime(blog.markdown_content);
+  const readingTime = getReadingTime(blog.markdown_content, getSectionsArray(blog.sections));
   const authorNames = blog.authors?.map(author => author.name).join(", ") || "AI4Bharat Team";
   const coverImageSrc = blog.image || blog.cover_image?.src;
 
@@ -237,7 +306,6 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
         position="relative"
         role="article"
       >
-        {/* Fixed aspect ratio image section */}
         <AspectRatio ratio={16/9} bg="orange.50">
           {coverImageSrc && !imageError ? (
             <Image
@@ -264,9 +332,7 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
           )}
         </AspectRatio>
 
-        {/* Content section with consistent spacing */}
         <Box p={6} display="flex" flexDirection="column" flex={1}>
-          {/* Metadata with consistent layout */}
           <HStack justify="space-between" align="center" mb={3}>
             <HStack spacing={2} fontSize="xs" color={textColor}>
               <Icon as={FaCalendarAlt} />
@@ -278,7 +344,6 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
             </HStack>
           </HStack>
 
-          {/* Title with consistent height */}
           <Heading
             as="h3"
             fontSize="lg"
@@ -298,7 +363,6 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
             {blog.title}
           </Heading>
 
-          {/* Description with consistent height */}
           <Text
             fontSize="sm"
             color={textColor}
@@ -317,12 +381,10 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
             {blog.description}
           </Text>
 
-          {/* Author info */}
           <Text fontSize="xs" color={textColor} mb={4} fontWeight="medium">
             By {authorNames.length > 30 ? `${authorNames.substring(0, 30)}...` : authorNames}
           </Text>
 
-          {/* Single clear CTA with orange theme */}
           <Button
             as={Link}
             href={`/blog/${blog.page_url || blog.id}`}
@@ -488,7 +550,6 @@ export default function BlogsPage() {
         animate={shouldReduceMotion ? {} : { opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
-        {/* Header with orange gradient */}
         <VStack spacing={8} align="center" mb={12}>
           <motion.div
             initial={shouldReduceMotion ? {} : { opacity: 0, y: -20 }}
@@ -526,7 +587,6 @@ export default function BlogsPage() {
           </motion.div>
         </VStack>
 
-        {/* Search */}
         {blogList && blogList.length > 0 && (
           <motion.div
             initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }}
@@ -541,11 +601,10 @@ export default function BlogsPage() {
           </motion.div>
         )}
 
-        {/* Blog Grid */}
         {blogList && blogList.length > 0 ? (
           filteredBlogs.length > 0 ? (
             <SimpleGrid columns={gridColumns} spacing={6} w="full">
-              <AnimatePresence mode="wait">
+              <AnimatePresence>
                 {filteredBlogs.map((blog, index) => (
                   <BlogCard key={blog.id} blog={blog} index={index} />
                 ))}

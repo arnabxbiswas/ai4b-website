@@ -24,6 +24,17 @@ const MotionBox = motion(Box);
 const MotionCard = motion(Card);
 const MotionButton = motion(Button);
 
+interface BlogSection {
+  type: 'markdown' | 'table' | 'examples' | 'image';
+  heading?: string;
+  heading_level?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
+  content?: string;
+  headers?: string[];
+  rows?: string[][];
+  items?: Array<{ id: string; prompt: string; response: string }>;
+  image?: { src: string; alt?: string; caption?: string };
+}
+
 interface Blog {
   id: number;
   title: string;
@@ -37,15 +48,7 @@ interface Blog {
   authors?: Array<{ name: string; affiliationId?: string }>;
   affiliations?: Array<{ id: string; name: string }>;
   publication_links?: Array<{ text: string; url: string; icon?: string }> | null;
-  sections?: Array<{
-    type: string;
-    heading?: string;
-    content?: string;
-    headers?: string[];
-    rows?: string[][];
-    items?: Array<{ id: string; prompt: string; response: string }>;
-    image?: { src: string; alt?: string; caption?: string };
-  }>;
+  sections?: BlogSection[];
   team?: {
     students?: Array<{ name: string }>;
     advisors?: Array<{ name: string }>;
@@ -58,11 +61,76 @@ interface BlogContentDisplayProps {
   blog: Blog;
 }
 
-function getReadingTime(text: string): string {
-  const WORDS_PER_MINUTE = 225; 
-  const wordCount = text.split(/\s+/).filter(word => word.length > 0).length;
-  const minutes = Math.ceil(wordCount / WORDS_PER_MINUTE);
+function getSectionsArray(sections: any): BlogSection[] {
+  if (Array.isArray(sections)) {
+    return sections;
+  }
+  if (typeof sections === 'string') {
+    try {
+      const parsed = JSON.parse(sections);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      console.error('Failed to parse sections:', e);
+      return [];
+    }
+  }
+  return [];
+}
+
+function getReadingTime(markdownContent: string, sections?: BlogSection[]): string {
+  const WORDS_PER_MINUTE = 225;
+  
+  let totalText = markdownContent || '';
+  
+  if (sections && Array.isArray(sections)) {
+    sections.forEach(section => {
+      if (section.heading) totalText += ' ' + section.heading;
+      if (section.content) totalText += ' ' + section.content;
+      
+      if (section.type === 'table' && section.headers && section.rows) {
+        totalText += ' ' + section.headers.join(' ');
+        section.rows.forEach((row: string[]) => {
+          totalText += ' ' + row.join(' ');
+        });
+      }
+      
+      if (section.type === 'examples' && section.items) {
+        section.items.forEach(item => {
+          totalText += ' ' + (item.prompt || '') + ' ' + (item.response || '');
+        });
+      }
+      
+      if (section.image?.caption) {
+        totalText += ' ' + section.image.caption;
+      }
+    });
+  }
+  
+  const cleanText = totalText
+    .replace(/[#*_`~\[\]()]/g, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  const words = cleanText.split(/\s+/).filter(word => word.length > 0);
+  const minutes = Math.max(1, Math.ceil(words.length / WORDS_PER_MINUTE));
+  
   return `${minutes} min read`;
+}
+
+function renderHeading(heading: string, level: string = 'h2', headingColor: string) {
+  const HeadingComponent = level as keyof JSX.IntrinsicElements;
+  return React.createElement(HeadingComponent, {
+    className: `blog-heading ${level}`,
+    style: {
+      fontSize: level === 'h1' ? '1.875rem' : level === 'h2' ? '1.5rem' : '1.25rem',
+      fontWeight: 'bold',
+      marginTop: '2rem',
+      marginBottom: '1rem',
+      color: headingColor,
+      lineHeight: '1.3'
+    }
+  }, heading);
 }
 
 function getIconComponent(iconName: string) {
@@ -159,16 +227,17 @@ function StickyNavigation({ title }: { title: string }) {
   );
 }
 
-function ResponsiveTable({ headers, rows }: { headers: string[], rows: string[][] }) {
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
-  const headerBg = useColorModeValue('gray.50', 'gray.700');
-  const stripedBg = useColorModeValue('gray.50', 'gray.800');
-  const hoverBg = useColorModeValue('gray.100', 'gray.600');
+function ResponsiveTable({ headers, rows }: { headers: string[]; rows: string[][] }) {
+  const borderColor = useColorModeValue('orange.200', 'orange.600');
+  const headerBg = useColorModeValue('orange.50', 'orange.800');
+  const hoverBg = useColorModeValue('orange.100', 'orange.700');
+  const textColor = useColorModeValue('gray.800', 'gray.100');
+  const headerTextColor = useColorModeValue('orange.800', 'orange.100');
 
   if (!headers?.length || !rows?.length) {
     return (
-      <Alert status="info" borderRadius="md">
-        <AlertIcon />
+      <Alert status="info" borderRadius="md" borderColor="orange.200">
+        <AlertIcon color="orange.500" />
         <AlertTitle>No data available</AlertTitle>
         <AlertDescription>Table data is currently unavailable.</AlertDescription>
       </Alert>
@@ -177,21 +246,35 @@ function ResponsiveTable({ headers, rows }: { headers: string[], rows: string[][
 
   return (
     <>
-      <Box display={{ base: 'none', lg: 'block' }} overflowX="auto">
+      {/* Desktop Table */}
+      <Box display={{ base: 'none', lg: 'block' }} overflowX="auto" my={6}>
         <TableContainer>
-          <Table variant="simple" size="md" role="table">
+          <Table 
+            variant="simple" 
+            size="sm" 
+            role="table"
+            bg={useColorModeValue('white', 'gray.800')}
+            borderRadius="md"
+            overflow="hidden"
+            border="1px solid"
+            borderColor={borderColor}
+          >
             <Thead bg={headerBg}>
               <Tr>
                 {headers.map((header, idx) => (
                   <Th 
                     key={idx}
                     borderColor={borderColor}
-                    fontWeight="semibold"
-                    fontSize="sm"
+                    fontWeight="medium"
+                    fontSize="xs"
                     textTransform="uppercase"
-                    letterSpacing="wider"
-                    py={4}
+                    letterSpacing="wide"
+                    py={3}
+                    px={4}
                     scope="col"
+                    color={headerTextColor}
+                    borderBottom="1px solid"
+                    borderBottomColor={borderColor}
                   >
                     {header}
                   </Th>
@@ -203,17 +286,21 @@ function ResponsiveTable({ headers, rows }: { headers: string[], rows: string[][
                 <Tr 
                   key={idx}
                   _hover={{ bg: hoverBg }}
-                  _odd={{ bg: stripedBg }}
-                  transition="background-color 0.2s"
+                  transition="background 0.2s ease"
+                  borderBottom={idx < rows.length - 1 ? "1px solid" : "none"}
+                  borderBottomColor={borderColor}
                 >
                   {row.map((cell, cellIdx) => (
                     <Td 
                       key={cellIdx}
                       borderColor={borderColor}
-                      py={4}
+                      py={2}
+                      px={4}
                       fontSize="sm"
+                      color={textColor}
+                      fontWeight={cell === 'Total' || cell?.includes('**') ? 'bold' : 'normal'}
                     >
-                      {cell || '-'}
+                      {cell?.replace(/\*\*/g, '') || '-'}
                     </Td>
                   ))}
                 </Tr>
@@ -223,35 +310,47 @@ function ResponsiveTable({ headers, rows }: { headers: string[], rows: string[][
         </TableContainer>
       </Box>
 
-      <Box display={{ base: 'block', lg: 'none' }}>
-        <VStack spacing={4} align="stretch">
+      {/* Mobile Cards */}
+      <Box display={{ base: 'block', lg: 'none' }} my={6}>
+        <VStack spacing={3} align="stretch">
           {rows.map((row, idx) => (
             <Card 
               key={idx}
               variant="outline"
               size="sm"
-              bg={useColorModeValue('white', 'gray.700')}
+              bg={useColorModeValue('white', 'gray.800')}
               borderColor={borderColor}
+              borderWidth="1px"
+              borderRadius="md"
+              _hover={{ 
+                borderColor: 'orange.300',
+                transform: 'translateY(-1px)'
+              }}
+              transition="all 0.2s ease"
             >
-              <CardBody p={4}>
-                <VStack spacing={3} align="stretch">
+              <CardBody p={3}>
+                <VStack spacing={2} align="stretch">
                   {headers.map((header, headerIdx) => (
                     <Box key={headerIdx}>
                       <Text 
                         fontSize="xs" 
-                        fontWeight="bold" 
-                        color={useColorModeValue('gray.600', 'gray.400')}
+                        fontWeight="medium" 
+                        color="orange.500"
                         textTransform="uppercase"
-                        letterSpacing="wider"
+                        letterSpacing="wide"
                         mb={1}
                       >
                         {header}
                       </Text>
-                      <Text fontSize="sm" color={useColorModeValue('gray.800', 'gray.200')}>
-                        {row[headerIdx] || '-'}
+                      <Text 
+                        fontSize="sm" 
+                        color={textColor}
+                        fontWeight={row[headerIdx] === 'Total' || row[headerIdx]?.includes('**') ? 'bold' : 'normal'}
+                      >
+                        {row[headerIdx]?.replace(/\*\*/g, '') || '-'}
                       </Text>
                       {headerIdx < headers.length - 1 && (
-                        <Divider mt={2} borderColor={borderColor} />
+                        <Divider mt={1} borderColor={borderColor} />
                       )}
                     </Box>
                   ))}
@@ -321,72 +420,77 @@ function InteractivePromptDemo({ examples }: { examples: any[] }) {
           </CardHeader>
           <CardBody pt={0}>
             <Grid 
-              templateColumns="repeat(auto-fit, minmax(300px, 1fr))" 
-              gap={4}
-            >
-              {examples.map((example, index) => (
-                <MotionCard
-                  key={example.id}
-                  whileHover={shouldReduceMotion ? {} : { 
-                    scale: 1.02, 
-                    boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
-                  }}
-                  whileTap={shouldReduceMotion ? {} : { scale: 0.98 }}
-                  cursor="pointer"
-                  onClick={() => handleTryPrompt(example.prompt)}
-                  bg={useColorModeValue('white', 'gray.700')}
-                  borderWidth="1px"
-                  borderColor={useColorModeValue('gray.200', 'gray.600')}
-                  _hover={{ 
-                    borderColor: 'orange.300',
-                    transform: shouldReduceMotion ? 'none' : 'translateY(-2px)'
-                  }}
-                  transition="all 0.2s"
-                  h="fit-content"
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleTryPrompt(example.prompt);
-                    }
-                  }}
-                  aria-label={`Try example: ${example.prompt}`}
-                >
-                  <CardBody p={4}>
-                    <VStack align="start" spacing={3}>
-                      <Badge colorScheme="orange" variant="subtle" size="sm" fontSize="xs">
-                        Example {index + 1}
-                      </Badge>
-                      <Text 
-                        fontSize="sm" 
-                        fontWeight="medium" 
-                        noOfLines={4}
-                        lineHeight="1.4"
-                      >
-                        {example.prompt}
-                      </Text>
-                      <Button
-                        size="sm"
-                        colorScheme="orange"
-                        variant="ghost"
-                        leftIcon={<FaPlay />}
-                        isLoading={isGenerating && selectedPrompt === example.prompt}
-                        loadingText="Generating..."
-                        alignSelf="flex-start"
-                        px={4}
-                        py={2}
-                        h="auto"
-                        mt={2}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Try This
-                      </Button>
-                    </VStack>
-                  </CardBody>
-                </MotionCard>
-              ))}
-            </Grid>
+  templateColumns={{ 
+    base: "1fr", 
+    md: "repeat(auto-fit, minmax(280px, 1fr))" 
+  }}
+  gap={{ base: 3, md: 4 }}
+>
+  {examples.map((example, index) => (
+    <MotionCard
+      key={example.id}
+      whileHover={shouldReduceMotion ? {} : { 
+        scale: 1.02, 
+        boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
+      }}
+      whileTap={shouldReduceMotion ? {} : { scale: 0.98 }}
+      cursor="pointer"
+      onClick={() => handleTryPrompt(example.prompt)}
+      bg={useColorModeValue('white', 'gray.700')}
+      borderWidth="1px"
+      borderColor={useColorModeValue('gray.200', 'gray.600')}
+      _hover={{ 
+        borderColor: 'orange.300',
+        transform: shouldReduceMotion ? 'none' : 'translateY(-2px)'
+      }}
+      transition="all 0.2s"
+      h="fit-content"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleTryPrompt(example.prompt);
+        }
+      }}
+      aria-label={`Try example: ${example.prompt}`}
+    >
+      <CardBody p={{ base: 3, md: 4 }}>
+        <VStack align="start" spacing={3}>
+          <Badge colorScheme="orange" variant="subtle" size="sm" fontSize="xs">
+            Example {index + 1}
+          </Badge>
+          <Text 
+            fontSize={{ base: "xs", md: "sm" }}
+            fontWeight="medium" 
+            noOfLines={{ base: 6, md: 4 }}
+            lineHeight="1.4"
+          >
+            {example.prompt}
+          </Text>
+          <Button
+            size="sm"
+            colorScheme="orange"
+            variant="ghost"
+            leftIcon={<FaPlay />}
+            isLoading={isGenerating && selectedPrompt === example.prompt}
+            loadingText="Generating..."
+            alignSelf="flex-start"
+            px={4}
+            py={2}
+            h="auto"
+            mt={2}
+            fontSize={{ base: "xs", md: "sm" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            Try This
+          </Button>
+        </VStack>
+      </CardBody>
+    </MotionCard>
+  ))}
+</Grid>
+
           </CardBody>
         </Card>
       </MotionBox>
@@ -496,13 +600,15 @@ function OptimizedImage({
   alt, 
   caption, 
   priority = false,
-  maxHeight = "500px"
+  maxHeight = "auto",
+  fullWidth = false
 }: {
   src: string;
   alt: string;
   caption?: string;
   priority?: boolean;
   maxHeight?: string;
+  fullWidth?: boolean;
 }) {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
@@ -518,10 +624,10 @@ function OptimizedImage({
   }
 
   return (
-    <Box position="relative">
+    <Box position="relative" w="full">
       {imageLoading && (
         <Skeleton 
-          height={maxHeight} 
+          height={{ base: "200px", md: maxHeight === "auto" ? "400px" : maxHeight }}
           borderRadius="md" 
           position="absolute"
           top={0}
@@ -535,18 +641,18 @@ function OptimizedImage({
         alt={alt}
         quality={85}
         priority={priority}
-        width={800}
-        height={500}
+        fill={false}
+        width={0}
+        height={0}
         style={{
           width: '100%',
           height: 'auto',
-          maxHeight,
-          objectFit: 'cover',
+          objectFit: 'contain',
           borderRadius: '8px',
           opacity: imageLoading ? 0 : 1,
           transition: 'opacity 0.3s ease'
         }}
-        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 800px"
+        sizes="(max-width: 480px) 100vw, (max-width: 768px) 95vw, (max-width: 1200px) 90vw, 1200px"
         onLoad={() => setImageLoading(false)}
         onError={() => {
           setImageError(true);
@@ -555,11 +661,12 @@ function OptimizedImage({
       />
       {caption && !imageLoading && (
         <Text 
-          fontSize="sm" 
+          fontSize={{ base: "xs", md: "sm" }}
           color={useColorModeValue('gray.600', 'gray.400')} 
           textAlign="center" 
           mt={3}
           fontStyle="italic"
+          px={2}
         >
           {caption}
         </Text>
@@ -567,6 +674,7 @@ function OptimizedImage({
     </Box>
   );
 }
+
 
 function SimpleTeamSection({ team }: { team: Blog['team'] }) {
   const shouldReduceMotion = useReducedMotion();
@@ -651,7 +759,8 @@ function SimpleTeamSection({ team }: { team: Blog['team'] }) {
 }
 
 export default function BlogContentDisplay({ blog }: BlogContentDisplayProps) {
-  const readingTime = getReadingTime(blog.markdown_content || '');
+  const sectionsArray = getSectionsArray(blog.sections);
+  const readingTime = getReadingTime(blog.markdown_content || '', sectionsArray);
   const [readingProgress, setReadingProgress] = useState(0);
   const shouldReduceMotion = useReducedMotion();
   const toast = useToast();
@@ -835,36 +944,40 @@ export default function BlogContentDisplay({ blog }: BlogContentDisplayProps) {
         </Container>
       </Box>
 
-      {coverImageSrc && (
-        <MotionBox
-          initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.95 }}
-          animate={shouldReduceMotion ? {} : { opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          my={8}
+
+{coverImageSrc && (
+  <MotionBox
+    initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.95 }}
+    animate={shouldReduceMotion ? {} : { opacity: 1, scale: 1 }}
+    transition={{ duration: 0.8, delay: 0.2 }}
+    my={{ base: 4, md: 8 }}
+    px={{ base: 2, md: 0 }}
+  >
+    <Container maxW="container.lg">
+      <Center>
+        <Box
+          boxShadow={{ base: "md", md: "xl" }}
+          border="2px solid"
+          borderColor={borderColor}
+          borderRadius="lg"
+          overflow="hidden"
+          w="full"
+          maxW={{ base: "100%", sm: "95%", md: "900px" }}
         >
-          <Container maxW="container.lg">
-            <Center>
-              <Box
-                boxShadow="xl"
-                border="2px solid"
-                borderColor={borderColor}
-                borderRadius="lg"
-                overflow="hidden"
-                w="full"
-                maxW="900px"
-              >
-                <OptimizedImage
-                  src={coverImageSrc}
-                  alt={coverImageAlt}
-                  caption={coverImageCaption}
-                  priority={true}
-                  maxHeight="500px"
-                />
-              </Box>
-            </Center>
-          </Container>
-        </MotionBox>
-      )}
+          <OptimizedImage
+            src={coverImageSrc}
+            alt={coverImageAlt}
+            caption={coverImageCaption}
+            priority={true}
+            maxHeight="auto"
+            fullWidth={false}
+          />
+        </Box>
+      </Center>
+    </Container>
+  </MotionBox>
+)}
+
 
       <Container maxW="container.lg" my={12} px={4}>
         <MotionBox
@@ -898,23 +1011,47 @@ export default function BlogContentDisplay({ blog }: BlogContentDisplayProps) {
               mx: 'auto',
               color: textColor,
               lineHeight: '1.7',
-              fontSize: { base: 'md', md: 'lg' },
+              fontSize: { base: 'sm', md: 'md' },
               'h1, h2, h3, h4, h5, h6': {
                 color: headingColor,
-                mt: { base: 8, md: 10 },
-                mb: { base: 4, md: 5 },
+                mt: { base: 6, md: 8 },
+                mb: { base: 3, md: 4 },
                 lineHeight: '1.3',
                 fontWeight: 'bold',
               },
-              h1: { fontSize: { base: '2xl', md: '3xl' } },
-              h2: { fontSize: { base: 'xl', md: '2xl' } },
-              h3: { fontSize: { base: 'lg', md: 'xl' } },
-              h4: { fontSize: { base: 'md', md: 'lg' } },
-              p: { mb: 6, lineHeight: '1.7' },
+              h1: { fontSize: { base: 'xl', md: '2xl' } },
+              h2: { fontSize: { base: 'lg', md: 'xl' } },
+              h3: { fontSize: { base: 'md', md: 'lg' } },
+              h4: { fontSize: { base: 'sm', md: 'md' } },
+              p: { 
+                mb: 4, 
+                lineHeight: '1.7', 
+                fontSize: { base: 'sm', md: 'md' },
+                color: textColor
+              },
+              strong: {
+                fontWeight: 'bold',
+                color: useColorModeValue('orange.700', 'orange.300'),
+              },
               a: {
                 color: linkColor,
                 textDecoration: 'underline',
-                _hover: { textDecoration: 'none', color: accentColor },
+                fontWeight: 'medium',
+                _hover: { 
+                  textDecoration: 'none', 
+                  color: accentColor,
+                  bg: useColorModeValue('orange.50', 'orange.900'),
+                  px: 1,
+                  borderRadius: 'sm'
+                },
+              },
+              'ul, ol': { 
+                ml: 6, 
+                mb: 4,
+                '& li': {
+                  mb: 2,
+                  fontSize: { base: 'sm', md: 'md' }
+                }
               },
               blockquote: {
                 borderLeft: '4px solid',
@@ -927,8 +1064,6 @@ export default function BlogContentDisplay({ blog }: BlogContentDisplayProps) {
                 bg: useColorModeValue('orange.50', 'orange.900'),
                 borderRadius: 'md',
               },
-              'ul, ol': { ml: 6, mb: 6 },
-              li: { mb: 3 },
               img: {
                 maxWidth: '100%',
                 height: 'auto',
@@ -941,7 +1076,7 @@ export default function BlogContentDisplay({ blog }: BlogContentDisplayProps) {
                 p: 6,
                 borderRadius: 'lg',
                 overflowX: 'auto',
-                fontSize: 'sm',
+                fontSize: 'xs',
                 my: 8,
                 border: '1px solid',
                 borderColor: borderColor,
@@ -952,7 +1087,7 @@ export default function BlogContentDisplay({ blog }: BlogContentDisplayProps) {
                 px: 2,
                 py: 1,
                 borderRadius: 'sm',
-                fontSize: '0.9em',
+                fontSize: '0.8em',
                 color: useColorModeValue('orange.800', 'orange.200'),
                 fontWeight: 'medium',
               },
@@ -966,7 +1101,7 @@ export default function BlogContentDisplay({ blog }: BlogContentDisplayProps) {
           >
             <ReactMarkdown>{blog.markdown_content}</ReactMarkdown>
 
-            {blog.sections?.map((section, index) => (
+            {sectionsArray.map((section, index) => (
               <MotionBox
                 key={index}
                 initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }}
@@ -974,43 +1109,163 @@ export default function BlogContentDisplay({ blog }: BlogContentDisplayProps) {
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 mt={8}
               >
-                {section.heading && (
-                  <Heading as="h2" size="xl" mb={6} color={headingColor}>
-                    {section.heading}
-                  </Heading>
-                )}
+                {section.heading && renderHeading(section.heading, section.heading_level || 'h2', headingColor)}
+                
                 {section.type === 'markdown' && section.content && (
-                  <ReactMarkdown>{section.content}</ReactMarkdown>
+                  <Box>
+                    <ReactMarkdown
+                      components={{
+                        h1: ({ children }) => (
+                          <Heading as="h1" size={{ base: 'xl', md: '2xl' }} mb={4} color={headingColor} fontWeight="bold">
+                            {children}
+                          </Heading>
+                        ),
+                        h2: ({ children }) => (
+                          <Heading as="h2" size={{ base: 'lg', md: 'xl' }} mb={3} color={headingColor} fontWeight="bold">
+                            {children}
+                          </Heading>
+                        ),
+                        h3: ({ children }) => (
+                          <Heading as="h3" size={{ base: 'md', md: 'lg' }} mb={2} color={headingColor} fontWeight="bold">
+                            {children}
+                          </Heading>
+                        ),
+                        p: ({ children }) => (
+                          <Text mb={4} lineHeight="1.8" color={textColor} fontSize={{ base: 'sm', md: 'md' }}>
+                            {children}
+                          </Text>
+                        ),
+                        strong: ({ children }) => (
+                          <Text 
+                            as="span" 
+                            fontWeight="bold" 
+                            color={useColorModeValue('orange.700', 'orange.300')}
+                            fontSize="inherit"
+                          >
+                            {children}
+                          </Text>
+                        ),
+                        em: ({ children }) => (
+                          <Text as="span" fontStyle="italic" color="inherit">
+                            {children}
+                          </Text>
+                        ),
+                        a: ({ href, children }) => (
+                          <Text 
+                            as="a" 
+                            href={href} 
+                            color={linkColor} 
+                            textDecoration="underline"
+                            fontWeight="medium"
+                            _hover={{ 
+                              textDecoration: 'none', 
+                              color: accentColor,
+                              bg: useColorModeValue('orange.50', 'orange.900'),
+                              px: 1,
+                              borderRadius: 'sm'
+                            }}
+                            target={href?.startsWith('http') ? '_blank' : undefined}
+                            rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
+                            transition="all 0.2s ease"
+                          >
+                            {children}
+                          </Text>
+                        ),
+                        ul: ({ children }) => (
+                          <Box as="ul" ml={6} mb={4} listStyleType="disc">
+                            {children}
+                          </Box>
+                        ),
+                        ol: ({ children }) => (
+                          <Box as="ol" ml={6} mb={4} listStyleType="decimal">
+                            {children}
+                          </Box>
+                        ),
+                        li: ({ children }) => (
+                          <Text as="li" mb={2} lineHeight="1.6" fontSize={{ base: 'sm', md: 'md' }}>
+                            {children}
+                          </Text>
+                        ),
+                        code: ({ children, className, ...props }) => {
+                          const isBlock = className && /language-/.test(className);
+                          return isBlock ? (
+                            <Box
+                              as="pre"
+                              bg={useColorModeValue('gray.50', 'gray.800')}
+                              border="1px solid"
+                              borderColor={borderColor}
+                              p={4}
+                              borderRadius="md"
+                              overflowX="auto"
+                              fontSize="xs"
+                              my={4}
+                              fontFamily="mono"
+                            >
+                              <Text as="code" color={textColor} {...props}>
+                                {children}
+                              </Text>
+                            </Box>
+                          ) : (
+                            <Text
+                              as="code"
+                              bg={useColorModeValue('orange.100', 'orange.800')}
+                              color={useColorModeValue('orange.800', 'orange.200')}
+                              px={2}
+                              py={1}
+                              borderRadius="sm"
+                              fontSize="0.85em"
+                              fontWeight="medium"
+                              fontFamily="mono"
+                              {...props}
+                            >
+                              {children}
+                            </Text>
+                          );
+                        }
+                      }}
+                    >
+                      {section.content}
+                    </ReactMarkdown>
+                  </Box>
                 )}
+                
                 {section.type === 'table' && section.headers && section.rows && (
                   <Box my={8}>
                     <ResponsiveTable headers={section.headers} rows={section.rows} />
                   </Box>
                 )}
+                
                 {section.type === 'examples' && section.items && (
                   <InteractivePromptDemo examples={section.items} />
                 )}
-                {section.type === 'image' && section.image?.src && (
-                  <Box my={8}>
-                    <Center>
-                      <Box
-                        boxShadow="lg"
-                        borderRadius="lg"
-                        overflow="hidden"
-                        w="full"
-                        maxW="800px"
-                        border="1px solid"
-                        borderColor={borderColor}
-                      >
-                        <OptimizedImage
-                          src={section.image.src}
-                          alt={section.image.alt || 'Section image'}
-                          caption={section.image.caption}
-                        />
-                      </Box>
-                    </Center>
-                  </Box>
-                )}
+                
+{section.type === 'image' && section.image?.src && (
+  <Box my={{ base: 4, md: 8 }} px={{ base: 2, md: 0 }}>
+    <Center>
+      <Box
+        w="full"
+        maxW={section.image.src.includes('indic-voices-dist') ? 
+          { base: "100%", md: "1200px" } : 
+          { base: "100%", md: "800px" }
+        }
+        border="1px solid"
+        borderColor={borderColor}
+        borderRadius="lg"
+        overflow="hidden"
+        boxShadow={{ base: "md", md: "lg" }}
+      >
+        <OptimizedImage
+          src={section.image.src}
+          alt={section.image.alt || 'Section image'}
+          caption={section.image.caption}
+          maxHeight="auto"
+          fullWidth={section.image.src.includes('indic-voices-dist')}
+        />
+      </Box>
+    </Center>
+  </Box>
+)}
+
               </MotionBox>
             ))}
 
