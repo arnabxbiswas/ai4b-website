@@ -18,7 +18,7 @@ interface Blog {
   affiliations?: Array<{ id: string; name: string }>;
   publication_links?: Array<{ text: string; url: string; icon?: string }> | null;
   sections?: Array<{
-    type: string;
+    type: "table" | "image" | "examples" | "markdown"; // ✅ Fixed: Specific string literals instead of generic string
     heading?: string;
     content?: string;
     headers?: string[];
@@ -37,7 +37,7 @@ interface Blog {
 async function getAllBlogPosts(): Promise<Blog[]> {
   try {
     const res = await fetch(`${API_URL}/news/`, { 
-      next: { revalidate: 3600 },
+      cache: 'no-store',
       headers: {
         'Content-Type': 'application/json',
       }
