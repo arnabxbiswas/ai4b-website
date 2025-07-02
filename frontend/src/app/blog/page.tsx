@@ -89,7 +89,6 @@ function getSectionsArray(sections: any): any[] {
       const parsed = JSON.parse(sections);
       return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
-      console.error('Failed to parse sections:', e);
       return [];
     }
   }
@@ -409,8 +408,19 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
 }
 
 const fetchBlogList = async (): Promise<Blog[]> => {
-  const response = await fetch(`${API_URL}/news/`, { next: { revalidate: 3600 } });
-  if (!response.ok) throw new Error("Failed to fetch blog list");
+  const endpoint = `${API_URL}/news/`;
+
+  const response = await fetch(endpoint, { 
+    next: { revalidate: 3600 },
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch blog list: ${response.status} ${response.statusText}`);
+  }
+  
   const data = await response.json();
   return data;
 };

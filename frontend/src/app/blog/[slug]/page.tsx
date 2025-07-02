@@ -4,6 +4,9 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import BlogContentDisplay from './BlogContentDisplay';
 
+export const dynamicParams = true;
+export const revalidate = 3600;
+
 interface Blog {
   id: number;
   title: string;
@@ -34,54 +37,100 @@ interface Blog {
   bibtex?: string;
 }
 
-async function getAllBlogPosts(): Promise<Blog[]> {
+let cachedBlogs: Blog[] | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_DURATION = 10 * 60 * 1000;
+
+async function getAllBlogPostsCached(): Promise<Blog[]> {
+  const now = Date.now();
+  
+  if (cachedBlogs && (now - cacheTimestamp) < CACHE_DURATION) {
+    return cachedBlogs;
+  }
+
+  const endpoint = `${API_URL}/news/`;
+
   try {
-    const res = await fetch(`${API_URL}/news/`, { 
-      cache: 'no-store',
+    const res = await fetch(endpoint, { 
       headers: {
         'Content-Type': 'application/json',
+      },
+      next: { 
+        revalidate: 3600,
+        tags: ['blog-list'] 
       }
     });
     
     if (!res.ok) {
-      console.error('Failed to fetch all blog posts:', res.status, res.statusText);
-      return [];
+      return cachedBlogs || [];
     }
     
     const data = await res.json();
-    return Array.isArray(data) ? data : [];
+    const blogs = Array.isArray(data) ? data : [];
+    
+    cachedBlogs = blogs;
+    cacheTimestamp = now;
+
+    return blogs;
   } catch (error) {
-    console.error('Error fetching blog posts:', error);
+    return cachedBlogs || [];
+  }
+}
+
+async function getIdFromPageUrl(pageUrl: string): Promise<number> {
+  const blogs = await getAllBlogPostsCached();
+  const blog = blogs.find(blog => blog.page_url === pageUrl);
+  
+  if (!blog) {
+    notFound();
+  }
+  
+  return blog.id;
+}
+
+async function getBlogPostById(id: number): Promise<Blog> {
+  const endpoint = `${API_URL}/news/${id}`;
+
+  try {
+    const res = await fetch(endpoint, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      next: { 
+        revalidate: 3600,
+        tags: [`blog-${id}`]
+      }
+    });
+    
+    if (!res.ok) {
+      notFound();
+    }
+    
+    const blog = await res.json();
+    return blog;
+  } catch (error) {
+    notFound();
+  }
+}
+
+export async function generateStaticParams() {
+  try {
+    const blogs = await getAllBlogPostsCached();
+    
+    const params = blogs
+      .filter(blog => blog.page_url && blog.page_url.trim() !== '')
+      .map((blog) => ({ slug: blog.page_url }));
+    
+    return params;
+  } catch (error) {
     return [];
   }
 }
 
-async function getBlogPostByPageUrl(pageUrl: string): Promise<Blog> {
-  const blogs = await getAllBlogPosts();
-  
-  const blog = blogs.find(blog => blog.page_url === pageUrl);
-  
-  if (!blog) {
-    console.error(`Blog post with page_url "${pageUrl}" not found`);
-    notFound();
-  }
-  
-  return blog;
-}
-
-export async function generateStaticParams() {
-  const blogs = await getAllBlogPosts();
-  
-  const params = blogs
-    .filter(blog => blog.page_url && blog.page_url.trim() !== '')
-    .map((blog) => ({ slug: blog.page_url }));
-  
-  return params;
-}
-
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   try {
-    const blog = await getBlogPostByPageUrl(params.slug);
+    const blogId = await getIdFromPageUrl(params.slug);
+    const blog = await getBlogPostById(blogId);
     
     const imageUrl = blog.image || blog.cover_image?.src;
     const images = imageUrl ? [imageUrl] : [];
@@ -108,7 +157,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
           height: 630,
           alt: blog.title
         })),
-        url: `https://ai4bharat.iitm.ac.in/blog/${blog.page_url}`,
+        url: `${API_URL}/news/blog/${blog.page_url}`,
         type: 'article',
         publishedTime: blog.published_on,
         siteName: 'AI4Bharat',
@@ -121,9 +170,6 @@ export async function generateMetadata({ params }: { params: { slug: string } })
         images: images,
         creator: '@AI4Bharat',
         site: '@AI4Bharat',
-      },
-      alternates: {
-        canonical: `https://ai4bharat.iitm.ac.in/blog/${blog.page_url}`,
       },
       robots: {
         index: true,
@@ -140,7 +186,6 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
     return metadata;
   } catch (error) {
-    console.error('Error generating metadata:', error);
     return {
       title: 'Blog Post | AI4Bharat',
       description: 'AI4Bharat blog post - Advancing AI for Indian languages',
@@ -150,10 +195,11 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
 export default async function BlogDetailPage({ params }: { params: { slug: string } }) {
   try {
-    const blog = await getBlogPostByPageUrl(params.slug);
+    const blogId = await getIdFromPageUrl(params.slug);
+    const blog = await getBlogPostById(blogId);
+    
     return <BlogContentDisplay blog={blog} />;
   } catch (error) {
-    console.error('Error in BlogDetailPage:', error);
     notFound();
   }
 }
