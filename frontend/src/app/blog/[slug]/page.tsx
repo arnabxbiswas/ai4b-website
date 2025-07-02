@@ -65,7 +65,6 @@ async function getBlogPostById(id: number): Promise<Blog> {
   return await res.json();
 }
 
-// Metadata generation (still works in App Router for SEO)
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   try {
     const blogId = await getIdFromPageUrl(params.slug);
