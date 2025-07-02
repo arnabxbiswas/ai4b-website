@@ -4,7 +4,8 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import BlogContentDisplay from './BlogContentDisplay';
 
-export const revalidate = 60;
+export const dynamicParams = true;
+export const revalidate = 60; 
 
 interface Blog {
   id: number;
@@ -36,40 +37,49 @@ interface Blog {
   bibtex?: string;
 }
 
-async function getAllBlogPosts(): Promise<Blog[]> {
+let cachedBlogs: Blog[] | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_DURATION = 10 * 60 * 1000;
+
+async function getAllBlogPostsCached(): Promise<Blog[]> {
+  const now = Date.now();
+  
+  if (cachedBlogs && (now - cacheTimestamp) < CACHE_DURATION) {
+    return cachedBlogs;
+  }
+
   const endpoint = `${API_URL}/news/`;
 
   try {
     const res = await fetch(endpoint, { 
       headers: {
         'Content-Type': 'application/json',
+      },
+      next: { 
+        revalidate: 60,
+        tags: ['blog-list'] 
       }
     });
     
     if (!res.ok) {
-      return [];
+      return cachedBlogs || [];
     }
     
     const data = await res.json();
-    return Array.isArray(data) ? data : [];
+    const blogs = Array.isArray(data) ? data : [];
+    
+    cachedBlogs = blogs;
+    cacheTimestamp = now;
+
+    return blogs;
   } catch (error) {
-    return [];
+    return cachedBlogs || [];
   }
 }
 
 async function getIdFromPageUrl(pageUrl: string): Promise<number> {
-  const blogs = await getAllBlogPosts();
-  
-  let blog = blogs.find(blog => blog.page_url === pageUrl);
-  
-  if (!blog && !isNaN(Number(pageUrl))) {
-    blog = blogs.find(blog => blog.id === Number(pageUrl));
-  }
-  
-  if (!blog) {
-    const decodedUrl = decodeURIComponent(pageUrl);
-    blog = blogs.find(blog => blog.page_url === decodedUrl);
-  }
+  const blogs = await getAllBlogPostsCached();
+  const blog = blogs.find(blog => blog.page_url === pageUrl);
   
   if (!blog) {
     notFound();
@@ -85,6 +95,10 @@ async function getBlogPostById(id: number): Promise<Blog> {
     const res = await fetch(endpoint, {
       headers: {
         'Content-Type': 'application/json',
+      },
+      next: { 
+        revalidate: 60,
+        tags: [`blog-${id}`]
       }
     });
     
@@ -101,13 +115,11 @@ async function getBlogPostById(id: number): Promise<Blog> {
 
 export async function generateStaticParams() {
   try {
-    const blogs = await getAllBlogPosts();
+    const blogs = await getAllBlogPostsCached();
     
     const params = blogs
       .filter(blog => blog.page_url && blog.page_url.trim() !== '')
-      .map((blog) => ({ 
-        slug: encodeURIComponent(blog.page_url) 
-      }));
+      .map((blog) => ({ slug: blog.page_url }));
     
     return params;
   } catch (error) {
@@ -117,8 +129,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   try {
-    const decodedSlug = decodeURIComponent(params.slug);
-    const blogId = await getIdFromPageUrl(decodedSlug);
+    const blogId = await getIdFromPageUrl(params.slug);
     const blog = await getBlogPostById(blogId);
     
     const imageUrl = blog.image || blog.cover_image?.src;
@@ -146,7 +157,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
           height: 630,
           alt: blog.title
         })),
-        url: `${process.env.NEXT_PUBLIC_SITE_URL || ''}/blog/${blog.page_url}`,
+        url: `${API_URL}/news/blog/${blog.page_url}`,
         type: 'article',
         publishedTime: blog.published_on,
         siteName: 'AI4Bharat',
@@ -184,8 +195,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
 export default async function BlogDetailPage({ params }: { params: { slug: string } }) {
   try {
-    const decodedSlug = decodeURIComponent(params.slug);
-    const blogId = await getIdFromPageUrl(decodedSlug);
+    const blogId = await getIdFromPageUrl(params.slug);
     const blog = await getBlogPostById(blogId);
     
     return <BlogContentDisplay blog={blog} />;
