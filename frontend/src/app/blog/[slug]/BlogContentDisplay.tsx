@@ -160,13 +160,13 @@ function formatTitle(title: string): string {
     })
     .join(' ');
 }
-
 function StickyNavigation({ title }: { title: string }) {
+  // ✅ All hooks at the top level
   const [isVisible, setIsVisible] = useState(false);
   const shouldReduceMotion = useReducedMotion();
-  
   const navBg = useColorModeValue('rgba(255, 255, 255, 0.95)', 'rgba(26, 32, 44, 0.95)');
   const borderColor = useColorModeValue('orange.200', 'orange.700');
+  const textColor = useColorModeValue('gray.700', 'gray.300');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -176,6 +176,8 @@ function StickyNavigation({ title }: { title: string }) {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  if (!title) return null;
 
   return (
     <AnimatePresence>
@@ -213,7 +215,7 @@ function StickyNavigation({ title }: { title: string }) {
               <Text 
                 fontSize="sm" 
                 fontWeight="medium" 
-                color={useColorModeValue('gray.700', 'gray.300')}
+                color={textColor}
                 noOfLines={1}
                 maxW="60%"
               >
@@ -226,6 +228,7 @@ function StickyNavigation({ title }: { title: string }) {
     </AnimatePresence>
   );
 }
+
 
 function ResponsiveTable({ headers, rows }: { headers: string[]; rows: string[][] }) {
   const borderColor = useColorModeValue('orange.200', 'orange.600');
