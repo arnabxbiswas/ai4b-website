@@ -46,6 +46,7 @@ import {
   FaClock
 } from "react-icons/fa";
 import { API_URL } from "../config";
+import { useRouter } from "next/navigation";
 
 interface Blog {
   id: number;
@@ -114,22 +115,21 @@ function getReadingTime(content: string, sections?: any[]): string {
         if (section.headers && Array.isArray(section.headers)) {
           totalText += ' ' + section.headers.join(' ');
         }
-       if (section.rows && Array.isArray(section.rows)) {
-  section.rows.forEach((row: string[]) => {
-    if (Array.isArray(row)) {
-      totalText += ' ' + row.join(' ');
-    }
-  });
-}
-
+        if (section.rows && Array.isArray(section.rows)) {
+          section.rows.forEach((row: string[]) => {
+            if (Array.isArray(row)) {
+              totalText += ' ' + row.join(' ');
+            }
+          });
+        }
       }
       
-     if (section.type === 'examples' && section.items && Array.isArray(section.items)) {
-  section.items.forEach((item: { id: string; prompt: string; response: string }) => {
-    if (item.prompt) totalText += ' ' + item.prompt;
-    if (item.response) totalText += ' ' + item.response;
-  });
-}
+      if (section.type === 'examples' && section.items && Array.isArray(section.items)) {
+        section.items.forEach((item: { id: string; prompt: string; response: string }) => {
+          if (item.prompt) totalText += ' ' + item.prompt;
+          if (item.response) totalText += ' ' + item.response;
+        });
+      }
       
       if (section.image && section.image.caption) {
         totalText += ' ' + section.image.caption;
@@ -261,6 +261,7 @@ function SearchAndFilter({
 function BlogCard({ blog, index }: { blog: Blog; index: number }) {
   const shouldReduceMotion = useReducedMotion();
   const [imageError, setImageError] = useState(false);
+  const router = useRouter();
   
   const cardBg = useColorModeValue("white", "gray.700");
   const borderColor = useColorModeValue("orange.100", "orange.700");
@@ -385,8 +386,10 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
           </Text>
 
           <Button
-            as={Link}
-            href={`/blog/${blog.page_url || blog.id}`}
+            onClick={() => {
+              const slug = blog.page_url || blog.id.toString();
+              router.push(`/blog/${encodeURIComponent(slug)}`);
+            }}
             colorScheme="orange"
             size="sm"
             variant="solid"
@@ -411,10 +414,10 @@ const fetchBlogList = async (): Promise<Blog[]> => {
   const endpoint = `${API_URL}/news/`;
 
   const response = await fetch(endpoint, { 
-    next: { revalidate: 3600 },
     headers: {
       'Content-Type': 'application/json',
-    }
+    },
+    cache: 'no-store'
   });
 
   if (!response.ok) {
@@ -434,8 +437,10 @@ export default function BlogsPage() {
     ["fetchBlogList"],
     fetchBlogList,
     {
-      staleTime: 5 * 60 * 1000, 
-      cacheTime: 10 * 60 * 1000,
+      staleTime: 0,
+      cacheTime: 0,
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
       onError: () => {
         toast({
           title: "Failed to load articles",

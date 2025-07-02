@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import BlogContentDisplay from './BlogContentDisplay';
 
-export const dynamicParams = true;
+export const revalidate = 60;
 
 interface Blog {
   id: number;
@@ -36,11 +36,6 @@ interface Blog {
   bibtex?: string;
 }
 
-// Removed all cache-related variables
-// let cachedBlogs: Blog[] | null = null;
-// let cacheTimestamp: number = 0;
-// const CACHE_DURATION = 10 * 60 * 1000;
-
 async function getAllBlogPosts(): Promise<Blog[]> {
   const endpoint = `${API_URL}/news/`;
 
@@ -48,27 +43,33 @@ async function getAllBlogPosts(): Promise<Blog[]> {
     const res = await fetch(endpoint, { 
       headers: {
         'Content-Type': 'application/json',
-      },
-      // Force no caching for immediate updates
-      cache: 'no-store'
+      }
     });
     
     if (!res.ok) {
-      console.error(`Failed to fetch blogs: ${res.status} ${res.statusText}`);
       return [];
     }
     
     const data = await res.json();
     return Array.isArray(data) ? data : [];
   } catch (error) {
-    console.error('Error fetching blogs:', error);
     return [];
   }
 }
 
 async function getIdFromPageUrl(pageUrl: string): Promise<number> {
   const blogs = await getAllBlogPosts();
-  const blog = blogs.find(blog => blog.page_url === pageUrl);
+  
+  let blog = blogs.find(blog => blog.page_url === pageUrl);
+  
+  if (!blog && !isNaN(Number(pageUrl))) {
+    blog = blogs.find(blog => blog.id === Number(pageUrl));
+  }
+  
+  if (!blog) {
+    const decodedUrl = decodeURIComponent(pageUrl);
+    blog = blogs.find(blog => blog.page_url === decodedUrl);
+  }
   
   if (!blog) {
     notFound();
@@ -84,20 +85,16 @@ async function getBlogPostById(id: number): Promise<Blog> {
     const res = await fetch(endpoint, {
       headers: {
         'Content-Type': 'application/json',
-      },
-      // Force no caching for immediate updates
-      cache: 'no-store'
+      }
     });
     
     if (!res.ok) {
-      console.error(`Failed to fetch blog ${id}: ${res.status} ${res.statusText}`);
       notFound();
     }
     
     const blog = await res.json();
     return blog;
   } catch (error) {
-    console.error(`Error fetching blog ${id}:`, error);
     notFound();
   }
 }
@@ -108,18 +105,20 @@ export async function generateStaticParams() {
     
     const params = blogs
       .filter(blog => blog.page_url && blog.page_url.trim() !== '')
-      .map((blog) => ({ slug: blog.page_url }));
+      .map((blog) => ({ 
+        slug: encodeURIComponent(blog.page_url) 
+      }));
     
     return params;
   } catch (error) {
-    console.error('Error generating static params:', error);
     return [];
   }
 }
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   try {
-    const blogId = await getIdFromPageUrl(params.slug);
+    const decodedSlug = decodeURIComponent(params.slug);
+    const blogId = await getIdFromPageUrl(decodedSlug);
     const blog = await getBlogPostById(blogId);
     
     const imageUrl = blog.image || blog.cover_image?.src;
@@ -147,7 +146,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
           height: 630,
           alt: blog.title
         })),
-        url: `${API_URL}/news/blog/${blog.page_url}`,
+        url: `${process.env.NEXT_PUBLIC_SITE_URL || ''}/blog/${blog.page_url}`,
         type: 'article',
         publishedTime: blog.published_on,
         siteName: 'AI4Bharat',
@@ -176,7 +175,6 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
     return metadata;
   } catch (error) {
-    console.error('Error generating metadata:', error);
     return {
       title: 'Blog Post | AI4Bharat',
       description: 'AI4Bharat blog post - Advancing AI for Indian languages',
@@ -186,12 +184,12 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
 export default async function BlogDetailPage({ params }: { params: { slug: string } }) {
   try {
-    const blogId = await getIdFromPageUrl(params.slug);
+    const decodedSlug = decodeURIComponent(params.slug);
+    const blogId = await getIdFromPageUrl(decodedSlug);
     const blog = await getBlogPostById(blogId);
     
     return <BlogContentDisplay blog={blog} />;
   } catch (error) {
-    console.error('Error in BlogDetailPage:', error);
     notFound();
   }
 }
