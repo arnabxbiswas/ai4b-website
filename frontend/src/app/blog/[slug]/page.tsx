@@ -5,7 +5,6 @@ import { Metadata } from 'next';
 import BlogContentDisplay from './BlogContentDisplay';
 
 export const dynamicParams = true;
-export const revalidate = 3600;
 
 interface Blog {
   id: number;
@@ -37,17 +36,12 @@ interface Blog {
   bibtex?: string;
 }
 
-let cachedBlogs: Blog[] | null = null;
-let cacheTimestamp: number = 0;
-const CACHE_DURATION = 10 * 60 * 1000;
+// Removed all cache-related variables
+// let cachedBlogs: Blog[] | null = null;
+// let cacheTimestamp: number = 0;
+// const CACHE_DURATION = 10 * 60 * 1000;
 
-async function getAllBlogPostsCached(): Promise<Blog[]> {
-  const now = Date.now();
-  
-  if (cachedBlogs && (now - cacheTimestamp) < CACHE_DURATION) {
-    return cachedBlogs;
-  }
-
+async function getAllBlogPosts(): Promise<Blog[]> {
   const endpoint = `${API_URL}/news/`;
 
   try {
@@ -55,30 +49,25 @@ async function getAllBlogPostsCached(): Promise<Blog[]> {
       headers: {
         'Content-Type': 'application/json',
       },
-      next: { 
-        revalidate: 3600,
-        tags: ['blog-list'] 
-      }
+      // Force no caching for immediate updates
+      cache: 'no-store'
     });
     
     if (!res.ok) {
-      return cachedBlogs || [];
+      console.error(`Failed to fetch blogs: ${res.status} ${res.statusText}`);
+      return [];
     }
     
     const data = await res.json();
-    const blogs = Array.isArray(data) ? data : [];
-    
-    cachedBlogs = blogs;
-    cacheTimestamp = now;
-
-    return blogs;
+    return Array.isArray(data) ? data : [];
   } catch (error) {
-    return cachedBlogs || [];
+    console.error('Error fetching blogs:', error);
+    return [];
   }
 }
 
 async function getIdFromPageUrl(pageUrl: string): Promise<number> {
-  const blogs = await getAllBlogPostsCached();
+  const blogs = await getAllBlogPosts();
   const blog = blogs.find(blog => blog.page_url === pageUrl);
   
   if (!blog) {
@@ -96,26 +85,26 @@ async function getBlogPostById(id: number): Promise<Blog> {
       headers: {
         'Content-Type': 'application/json',
       },
-      next: { 
-        revalidate: 3600,
-        tags: [`blog-${id}`]
-      }
+      // Force no caching for immediate updates
+      cache: 'no-store'
     });
     
     if (!res.ok) {
+      console.error(`Failed to fetch blog ${id}: ${res.status} ${res.statusText}`);
       notFound();
     }
     
     const blog = await res.json();
     return blog;
   } catch (error) {
+    console.error(`Error fetching blog ${id}:`, error);
     notFound();
   }
 }
 
 export async function generateStaticParams() {
   try {
-    const blogs = await getAllBlogPostsCached();
+    const blogs = await getAllBlogPosts();
     
     const params = blogs
       .filter(blog => blog.page_url && blog.page_url.trim() !== '')
@@ -123,6 +112,7 @@ export async function generateStaticParams() {
     
     return params;
   } catch (error) {
+    console.error('Error generating static params:', error);
     return [];
   }
 }
@@ -186,6 +176,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
     return metadata;
   } catch (error) {
+    console.error('Error generating metadata:', error);
     return {
       title: 'Blog Post | AI4Bharat',
       description: 'AI4Bharat blog post - Advancing AI for Indian languages',
@@ -200,6 +191,7 @@ export default async function BlogDetailPage({ params }: { params: { slug: strin
     
     return <BlogContentDisplay blog={blog} />;
   } catch (error) {
+    console.error('Error in BlogDetailPage:', error);
     notFound();
   }
 }
