@@ -113,20 +113,6 @@ async function getBlogPostById(id: number): Promise<Blog> {
   }
 }
 
-export async function generateStaticParams() {
-  try {
-    const blogs = await getAllBlogPostsCached();
-    
-    const params = blogs
-      .filter(blog => blog.page_url && blog.page_url.trim() !== '')
-      .map((blog) => ({ slug: blog.page_url }));
-    
-    return params;
-  } catch (error) {
-    return [];
-  }
-}
-
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   try {
     const blogId = await getIdFromPageUrl(params.slug);
