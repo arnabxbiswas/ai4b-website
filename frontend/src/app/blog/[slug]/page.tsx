@@ -34,31 +34,6 @@ interface Blog {
   bibtex?: string;
 }
 
-
-export async function generateStaticParams() {
-  try {
-    const response = await fetch(`${API_URL}/news/`, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (!response.ok) {
-      console.error(`Failed to fetch blog list: ${response.status} ${response.statusText}`);
-      return [];
-    }
-    
-    const blogs: Blog[] = await response.json();
-    
-    return blogs.map((blog) => ({
-      slug: blog.page_url,
-    }));
-  } catch (error) {
-    console.error("Error generating static params:", error);
-    return [];
-  }
-}
-
 async function getIdFromPageUrl(pageUrl: string): Promise<number> {
   const res = await fetch(`${API_URL}/news/`, {
     headers: {
