@@ -1,6 +1,6 @@
 const nextConfig = {
+  output: 'export', 
   reactStrictMode: false,
-  output: "export",
   eslint: {
     ignoreDuringBuilds: true,
   },
