@@ -34,13 +34,27 @@ interface Blog {
   bibtex?: string;
 }
 
+// Function to validate blog data
+function validateBlogData(blog: any): blog is Blog {
+  return blog && 
+         typeof blog.id === 'number' && 
+         typeof blog.title === 'string' &&
+         typeof blog.page_url === 'string';
+}
 
 export async function generateStaticParams() {
   try {
+    // Check if we're in a build environment where API might not be accessible
+    if (!API_URL) {
+      console.warn('API_URL not defined, returning empty static params');
+      return [];
+    }
+
     const response = await fetch(`${API_URL}/news/`, {
       headers: {
         'Content-Type': 'application/json',
       },
+      next: { revalidate: 60 }
     });
     
     if (!response.ok) {
@@ -50,7 +64,10 @@ export async function generateStaticParams() {
     
     const blogs: Blog[] = await response.json();
     
-    return blogs.map((blog) => ({
+    // Validate and filter blogs
+    const validBlogs = blogs.filter(validateBlogData);
+    
+    return validBlogs.map((blog) => ({
       slug: blog.page_url,
     }));
   } catch (error) {
@@ -60,34 +77,56 @@ export async function generateStaticParams() {
 }
 
 async function getIdFromPageUrl(pageUrl: string): Promise<number> {
-  const res = await fetch(`${API_URL}/news/`, {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    cache: 'no-store', 
-  });
-  if (!res.ok) {
+  try {
+    const res = await fetch(`${API_URL}/news/`, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      next: { revalidate: 60 }
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Failed to fetch blog list: ${res.status}`);
+    }
+    
+    const blogs = await res.json();
+    const blog = blogs.find((b: Blog) => b.page_url === pageUrl);
+    
+    if (!blog || !validateBlogData(blog)) {
+      notFound();
+    }
+    
+    return blog.id;
+  } catch (error) {
+    console.error("Error fetching blog by page URL:", error);
     notFound();
   }
-  const blogs = await res.json();
-  const blog = blogs.find((b: Blog) => b.page_url === pageUrl);
-  if (!blog) {
-    notFound();
-  }
-  return blog.id;
 }
 
 async function getBlogPostById(id: number): Promise<Blog> {
-  const res = await fetch(`${API_URL}/news/${id}`, {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    cache: 'no-store', 
-  });
-  if (!res.ok) {
+  try {
+    const res = await fetch(`${API_URL}/news/${id}`, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      next: { revalidate: 60 }
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Failed to fetch blog: ${res.status}`);
+    }
+    
+    const blog = await res.json();
+    
+    if (!validateBlogData(blog)) {
+      throw new Error('Invalid blog data structure');
+    }
+    
+    return blog;
+  } catch (error) {
+    console.error("Error fetching blog by ID:", error);
     notFound();
   }
-  return await res.json();
 }
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
@@ -96,6 +135,21 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     const blog = await getBlogPostById(blogId);
     const imageUrl = blog.image || blog.cover_image?.src;
     const images = imageUrl ? [imageUrl] : [];
+    
+    // Structured data for SEO
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": blog.title,
+      "description": blog.description,
+      "datePublished": blog.published_on,
+      "author": blog.authors?.map(a => ({ "@type": "Person", "name": a.name })) || [{ "@type": "Person", "name": "AI4Bharat Team" }],
+      "publisher": {
+        "@type": "Organization",
+        "name": "AI4Bharat"
+      }
+    };
+    
     return {
       title: `${blog.title} | AI4Bharat Blog`,
       description: blog.description,
@@ -118,7 +172,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
           height: 630,
           alt: blog.title
         })),
-        url: `${API_URL}/news/blog/${blog.page_url}`,
+        url: `${process.env.NEXT_PUBLIC_SITE_URL || ''}/blog/${blog.page_url}`,
         type: 'article',
         publishedTime: blog.published_on,
         siteName: 'AI4Bharat',
@@ -143,8 +197,12 @@ export async function generateMetadata({ params }: { params: { slug: string } })
           'max-snippet': -1,
         },
       },
+      other: {
+        'application/ld+json': JSON.stringify(structuredData),
+      },
     };
   } catch (error) {
+    console.error("Error generating metadata:", error);
     return {
       title: 'Blog Post | AI4Bharat',
       description: 'AI4Bharat blog post - Advancing AI for Indian languages',
@@ -158,6 +216,7 @@ export default async function BlogDetailPage({ params }: { params: { slug: strin
     const blog = await getBlogPostById(blogId);
     return <BlogContentDisplay blog={blog} />;
   } catch (error) {
+    console.error("Error in BlogDetailPage:", error);
     notFound();
   }
 }

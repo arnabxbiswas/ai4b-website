@@ -48,20 +48,38 @@ interface Blog {
   bibtex?: string;
 }
 
+// Function to validate blog data
+function validateBlogData(blog: any): blog is Blog {
+  return blog && 
+         typeof blog.id === 'number' && 
+         typeof blog.title === 'string' &&
+         typeof blog.page_url === 'string';
+}
+
 async function fetchBlogList(): Promise<Blog[]> {
   const endpoint = `${API_URL}/news/`;
   try {
+    if (!API_URL) {
+      throw new Error('API_URL is not configured');
+    }
+
     const response = await fetch(endpoint, {
       headers: {
         'Content-Type': 'application/json',
       },
-      next: { revalidate: 60 } 
+      next: { revalidate: 60 }
     });
+    
     if (!response.ok) {
       throw new Error(`Failed to fetch blog list: ${response.status} ${response.statusText}`);
     }
+    
     const data = await response.json();
-    return data;
+    
+    // Validate and filter blog data
+    const validBlogs = Array.isArray(data) ? data.filter(validateBlogData) : [];
+    
+    return validBlogs;
   } catch (error) {
     console.error("Error fetching blogs:", error);
     throw error;
@@ -75,7 +93,8 @@ export default async function BlogsPage() {
   try {
     blogList = await fetchBlogList();
   } catch (err) {
-    error = err instanceof Error ? err : new Error('Unknown error');
+    error = err instanceof Error ? err : new Error('Unknown error occurred while fetching blogs');
+    console.error("Blog page error:", err);
   }
 
   const bgColor = "orange.50";
@@ -104,7 +123,10 @@ export default async function BlogsPage() {
                   Unable to load articles
                 </AlertTitle>
                 <AlertDescription maxWidth="sm" fontSize="md">
-                  Please check your internet connection and try again.
+                  {error.message.includes('API_URL') 
+                    ? 'Configuration error. Please try again later.' 
+                    : 'Please check your internet connection and try again.'
+                  }
                 </AlertDescription>
               </Alert>
               <Button
