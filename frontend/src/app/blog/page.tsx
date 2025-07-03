@@ -1,22 +1,51 @@
+"use client";
+
+import { useQuery } from "react-query";
 import {
   Container,
   Heading,
   Text,
+  Spinner,
   Center,
   VStack,
   Box,
   Button,
+  useColorModeValue,
+  Skeleton,
+  Badge,
+  Flex,
+  HStack,
   Icon,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  SimpleGrid,
+  useBreakpointValue,
+  Divider,
   Alert,
   AlertIcon,
   AlertTitle,
   AlertDescription,
+  useToast,
+  IconButton,
+  Tooltip,
+  AspectRatio,
 } from "@chakra-ui/react";
-import { FaHome } from "react-icons/fa";
-import { API_URL } from "../config"; 
-import ClientBlogsRenderer from "../../../components/ClientBlogsRenderer"; 
-
-export const revalidate = 60; 
+import Link from "next/link";
+import Image from "next/image";
+import { motion, useReducedMotion, AnimatePresence } from "framer-motion";
+import { useState, useMemo, useCallback } from "react";
+import { 
+  FaSearch, 
+  FaCalendarAlt, 
+  FaUser, 
+  FaArrowRight, 
+  FaBookOpen,
+  FaTags,
+  FaHome,
+  FaClock
+} from "react-icons/fa";
+import { API_URL } from "../config";
 
 interface Blog {
   id: number;
@@ -48,6 +77,9 @@ interface Blog {
   bibtex?: string;
 }
 
+const MotionBox = motion(Box);
+const MotionContainer = motion(Container);
+
 // Function to validate blog data
 function validateBlogData(blog: any): blog is Blog {
   return blog && 
@@ -56,20 +88,347 @@ function validateBlogData(blog: any): blog is Blog {
          typeof blog.page_url === 'string';
 }
 
-async function fetchBlogList(): Promise<Blog[]> {
+function getSectionsArray(sections: any): any[] {
+  if (Array.isArray(sections)) {
+    return sections;
+  }
+  if (typeof sections === 'string') {
+    try {
+      const parsed = JSON.parse(sections);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+  return [];
+}
+
+function getReadingTime(content: string, sections?: any[]): string {
+  const WORDS_PER_MINUTE = 225;
+  
+  let totalText = content || '';
+  
+  if (sections && Array.isArray(sections)) {
+    sections.forEach(section => {
+      if (section.heading) {
+        totalText += ' ' + section.heading;
+      }
+      
+      if (section.content) {
+        totalText += ' ' + section.content;
+      }
+      
+      if (section.type === 'table') {
+        if (section.headers && Array.isArray(section.headers)) {
+          totalText += ' ' + section.headers.join(' ');
+        }
+        if (section.rows && Array.isArray(section.rows)) {
+          section.rows.forEach((row: string[]) => {
+            if (Array.isArray(row)) {
+              totalText += ' ' + row.join(' ');
+            }
+          });
+        }
+      }
+      
+      if (section.type === 'examples' && section.items && Array.isArray(section.items)) {
+        section.items.forEach((item: { id: string; prompt: string; response: string }) => {
+          if (item.prompt) totalText += ' ' + item.prompt;
+          if (item.response) totalText += ' ' + item.response;
+        });
+      }
+      
+      if (section.image && section.image.caption) {
+        totalText += ' ' + section.image.caption;
+      }
+    });
+  }
+  
+  if (!totalText || totalText.trim().length === 0) {
+    return "1 min read";
+  }
+  
+  const cleanText = totalText
+    .replace(/[#*_`~\[\]()]/g, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  const words = cleanText.split(/\s+/).filter(word => word.length > 0);
+  const wordCount = words.length;
+  
+  const minutes = Math.max(1, Math.ceil(wordCount / WORDS_PER_MINUTE));
+  
+  return `${minutes} min read`;
+}
+
+function formatDate(dateString: string): string {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function BlogCardSkeleton() {
+  const cardBg = useColorModeValue("white", "gray.700");
+  const borderColor = useColorModeValue("orange.100", "orange.800");
+
+  return (
+    <Box
+      borderWidth="1px"
+      borderRadius="xl"
+      overflow="hidden"
+      bg={cardBg}
+      borderColor={borderColor}
+      height="auto"
+      minHeight="400px"
+      boxShadow="sm"
+    >
+      <AspectRatio ratio={16/9}>
+        <Skeleton borderRadius="0" />
+      </AspectRatio>
+      <Box p={6} display="flex" flexDirection="column" gap={4}>
+        <HStack justify="space-between">
+          <Skeleton height="20px" width="80px" borderRadius="full" />
+          <Skeleton height="16px" width="60px" />
+        </HStack>
+        <Skeleton height="24px" width="90%" />
+        <VStack spacing={2} align="start" flex={1}>
+          <Skeleton height="16px" width="100%" />
+          <Skeleton height="16px" width="100%" />
+          <Skeleton height="16px" width="80%" />
+        </VStack>
+        <Skeleton height="16px" width="120px" />
+        <Skeleton height="40px" borderRadius="md" />
+      </Box>
+    </Box>
+  );
+}
+
+function SearchAndFilter({ 
+  searchTerm, 
+  onSearchChange, 
+  totalCount 
+}: { 
+  searchTerm: string; 
+  onSearchChange: (value: string) => void;
+  totalCount: number;
+}) {
+  const inputBg = useColorModeValue("white", "gray.700");
+  const borderColor = useColorModeValue("orange.200", "orange.600");
+  const textColor = useColorModeValue("gray.600", "gray.300");
+
+  return (
+    <Box mb={12}>
+      <VStack spacing={6}>
+        <InputGroup maxW="500px" size="lg">
+          <InputLeftElement pointerEvents="none">
+            <Icon as={FaSearch} color="orange.400" />
+          </InputLeftElement>
+          <Input
+            placeholder="Search articles..."
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+            bg={inputBg}
+            borderColor={borderColor}
+            borderWidth="1px"
+            borderRadius="md"
+            fontSize="md"
+            _hover={{ borderColor: "orange.300" }}
+            _focus={{ 
+              borderColor: "orange.400", 
+              boxShadow: "0 0 0 1px orange.400" 
+            }}
+            _placeholder={{ color: textColor }}
+          />
+        </InputGroup>
+        
+        <HStack spacing={4} color={textColor} fontSize="sm">
+          <HStack spacing={2}>
+            <Icon as={FaBookOpen} />
+            <Text fontWeight="medium">
+              {totalCount} {totalCount === 1 ? 'article' : 'articles'}
+            </Text>
+          </HStack>
+          {searchTerm && (
+            <>
+              <Divider orientation="vertical" h="20px" />
+              <Text>
+                Results for: <Text as="span" fontWeight="semibold" color="orange.500">"{searchTerm}"</Text>
+              </Text>
+            </>
+          )}
+        </HStack>
+      </VStack>
+    </Box>
+  );
+}
+
+function BlogCard({ blog, index }: { blog: Blog; index: number }) {
+  const shouldReduceMotion = useReducedMotion();
+  const [imageError, setImageError] = useState(false);
+  
+  const cardBg = useColorModeValue("white", "gray.700");
+  const borderColor = useColorModeValue("orange.100", "orange.700");
+  const textColor = useColorModeValue("gray.600", "gray.300");
+  const headingColor = useColorModeValue("gray.800", "white");
+  const hoverBorderColor = useColorModeValue("orange.300", "orange.500");
+
+  const readingTime = getReadingTime(blog.markdown_content, getSectionsArray(blog.sections));
+  const authorNames = blog.authors?.map(author => author.name).join(", ") || "AI4Bharat Team";
+  const coverImageSrc = blog.image || blog.cover_image?.src;
+
+  return (
+    <MotionBox
+      initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }}
+      animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
+      transition={{
+        duration: 0.4,
+        delay: index * 0.05,
+        ease: "easeOut",
+      }}
+      whileHover={shouldReduceMotion ? {} : { 
+        y: -4,
+        transition: { duration: 0.2, ease: "easeOut" }
+      }}
+      height="auto"
+    >
+      <Box
+        borderWidth="1px"
+        borderColor={borderColor}
+        borderRadius="xl"
+        overflow="hidden"
+        bg={cardBg}
+        boxShadow="sm"
+        transition="all 0.2s ease"
+        _hover={{
+          boxShadow: "lg",
+          borderColor: hoverBorderColor,
+        }}
+        height="100%"
+        display="flex"
+        flexDirection="column"
+        position="relative"
+        role="article"
+      >
+        <AspectRatio ratio={16/9} bg="orange.50">
+          {coverImageSrc && !imageError ? (
+            <Image
+              src={coverImageSrc}
+              alt={blog.cover_image?.alt || blog.title}
+              fill
+              style={{
+                objectFit: 'cover',
+                objectPosition: 'center',
+              }}
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              onError={() => setImageError(true)}
+              quality={75}
+            />
+          ) : (
+            <Center bg="orange.50">
+              <VStack spacing={2}>
+                <Icon as={FaBookOpen} fontSize="2xl" color="orange.400" />
+                <Text color="orange.600" fontSize="sm" fontWeight="medium">
+                  Article
+                </Text>
+              </VStack>
+            </Center>
+          )}
+        </AspectRatio>
+
+        <Box p={6} display="flex" flexDirection="column" flex={1}>
+          <HStack justify="space-between" align="center" mb={3}>
+            <HStack spacing={2} fontSize="xs" color={textColor}>
+              <Icon as={FaCalendarAlt} />
+              <Text>{formatDate(blog.published_on)}</Text>
+            </HStack>
+            <HStack spacing={2} fontSize="xs" color={textColor}>
+              <Icon as={FaClock} />
+              <Text>{readingTime}</Text>
+            </HStack>
+          </HStack>
+
+          <Heading
+            as="h3"
+            fontSize="lg"
+            fontWeight="semibold"
+            color={headingColor}
+            lineHeight="1.3"
+            mb={3}
+            minHeight="2.6em"
+            display="-webkit-box"
+            sx={{
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {blog.title}
+          </Heading>
+
+          <Text
+            fontSize="sm"
+            color={textColor}
+            lineHeight="1.5"
+            mb={4}
+            flex={1}
+            minHeight="4.5em"
+            display="-webkit-box"
+            sx={{
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}
+          >
+            {blog.description}
+          </Text>
+
+          <Text fontSize="xs" color={textColor} mb={4} fontWeight="medium">
+            By {authorNames.length > 30 ? `${authorNames.substring(0, 30)}...` : authorNames}
+          </Text>
+
+          <Button
+            as={Link}
+            href={`/blog/${blog.page_url || blog.id}`}
+            colorScheme="orange"
+            size="sm"
+            variant="solid"
+            borderRadius="md"
+            fontWeight="medium"
+            rightIcon={<Icon as={FaArrowRight} fontSize="xs" />}
+            _hover={{ 
+              transform: shouldReduceMotion ? 'none' : 'translateY(-1px)',
+              boxShadow: "md"
+            }}
+            mt="auto"
+          >
+            Read Article
+          </Button>
+        </Box>
+      </Box>
+    </MotionBox>
+  );
+}
+
+const fetchBlogList = async (): Promise<Blog[]> => {
   const endpoint = `${API_URL}/news/`;
+
   try {
     if (!API_URL) {
       throw new Error('API_URL is not configured');
     }
 
-    const response = await fetch(endpoint, {
+    const response = await fetch(endpoint, { 
+      next: { revalidate: 3600 },
       headers: {
         'Content-Type': 'application/json',
-      },
-      next: { revalidate: 60 }
+      }
     });
-    
+
     if (!response.ok) {
       throw new Error(`Failed to fetch blog list: ${response.status} ${response.statusText}`);
     }
@@ -84,22 +443,91 @@ async function fetchBlogList(): Promise<Blog[]> {
     console.error("Error fetching blogs:", error);
     throw error;
   }
-}
+};
 
-export default async function BlogsPage() {
-  let blogList: Blog[] = [];
-  let error: Error | null = null;
+export default function BlogsPage() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const shouldReduceMotion = useReducedMotion();
+  const toast = useToast();
+  
+  const { data: blogList, isLoading, error, refetch } = useQuery<Blog[]>(
+    ["fetchBlogList"],
+    fetchBlogList,
+    {
+      staleTime: 5 * 60 * 1000, 
+      cacheTime: 10 * 60 * 1000,
+      onError: () => {
+        toast({
+          title: "Failed to load articles",
+          description: "Please check your connection and try again.",
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    }
+  );
 
-  try {
-    blogList = await fetchBlogList();
-  } catch (err) {
-    error = err instanceof Error ? err : new Error('Unknown error occurred while fetching blogs');
-    console.error("Blog page error:", err);
+  const filteredBlogs = useMemo(() => {
+    if (!blogList) return [];
+    if (!searchTerm.trim()) return blogList;
+
+    const searchLower = searchTerm.toLowerCase();
+    return blogList.filter(blog => 
+      blog.title.toLowerCase().includes(searchLower) ||
+      blog.description.toLowerCase().includes(searchLower) ||
+      blog.authors?.some(author => 
+        author.name.toLowerCase().includes(searchLower)
+      )
+    );
+  }, [blogList, searchTerm]);
+
+  const bgColor = useColorModeValue("orange.50", "gray.900");
+  const textColor = useColorModeValue("gray.700", "gray.300");
+  const headingColor = useColorModeValue("gray.900", "white");
+
+  const gridColumns = useBreakpointValue({
+    base: 1,
+    md: 2,
+    lg: 3,
+    xl: 3
+  });
+
+  if (isLoading) {
+    return (
+      <Box bg={bgColor} minH="100vh">
+        <Container maxW="6xl" py={16} px={{ base: 4, md: 6 }}>
+          <VStack spacing={8} align="center" mb={12}>
+            <Heading
+              as="h1"
+              fontSize={{ base: "2xl", md: "3xl", lg: "4xl" }}
+              textAlign="center"
+              bgGradient="linear(to-r, orange.400, orange.600)"
+              bgClip="text"
+              fontWeight="bold"
+            >
+              AI4Bharat Blog
+            </Heading>
+            <Text
+              fontSize={{ base: "md", md: "lg" }}
+              maxW="3xl"
+              textAlign="center"
+              color={textColor}
+              lineHeight="relaxed"
+            >
+              Discover cutting-edge research and insights from the AI4Bharat community
+            </Text>
+          </VStack>
+          
+          <SimpleGrid columns={gridColumns} spacing={6} w="full">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <BlogCardSkeleton key={index} />
+            ))}
+          </SimpleGrid>
+        </Container>
+      </Box>
+    );
   }
-
-  const bgColor = "orange.50";
-  const textColor = "gray.700";
-  const headingColor = "gray.900";
 
   if (error) {
     return (
@@ -123,7 +551,7 @@ export default async function BlogsPage() {
                   Unable to load articles
                 </AlertTitle>
                 <AlertDescription maxWidth="sm" fontSize="md">
-                  {error.message.includes('API_URL') 
+                  {error instanceof Error && error.message.includes('API_URL') 
                     ? 'Configuration error. Please try again later.' 
                     : 'Please check your internet connection and try again.'
                   }
@@ -131,13 +559,12 @@ export default async function BlogsPage() {
               </Alert>
               <Button
                 colorScheme="orange"
+                onClick={() => refetch()}
                 size="lg"
                 borderRadius="md"
                 leftIcon={<Icon as={FaHome} />}
-                href="/"
-                as="a"
               >
-                Go Home
+                Try Again
               </Button>
             </VStack>
           </Center>
@@ -148,37 +575,114 @@ export default async function BlogsPage() {
 
   return (
     <Box bg={bgColor} minH="100vh">
-      <Container maxW="6xl" py={16} px={{ base: 4, md: 6 }}>
+      <MotionContainer 
+        maxW="6xl" 
+        py={16} 
+        px={{ base: 4, md: 6 }}
+        initial={shouldReduceMotion ? {} : { opacity: 0 }}
+        animate={shouldReduceMotion ? {} : { opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
         <VStack spacing={8} align="center" mb={12}>
-          <Heading
-            as="h1"
-            fontSize={{ base: "2xl", md: "3xl", lg: "4xl" }}
-            textAlign="center"
-            bgGradient="linear(to-r, orange.400, orange.600)"
-            bgClip="text"
-            fontWeight="bold"
-            lineHeight="shorter"
+          <motion.div
+            initial={shouldReduceMotion ? {} : { opacity: 0, y: -20 }}
+            animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
           >
-            AI4Bharat Blog
-          </Heading>
-          <Text
-            fontSize={{ base: "md", md: "lg" }}
-            maxW="3xl"
-            textAlign="center"
-            color={textColor}
-            lineHeight="relaxed"
+            <Heading
+              as="h1"
+              fontSize={{ base: "2xl", md: "3xl", lg: "4xl" }}
+              textAlign="center"
+              bgGradient="linear(to-r, orange.400, orange.600)"
+              bgClip="text"
+              fontWeight="bold"
+              lineHeight="shorter"
+            >
+              AI4Bharat Blog
+            </Heading>
+          </motion.div>
+          
+          <motion.div
+            initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }}
+            animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
           >
-            Discover cutting-edge research and insights from the AI4Bharat community. 
-            Explore our latest work in AI for Indian languages and beyond.
-          </Text>
+            <Text
+              fontSize={{ base: "md", md: "lg" }}
+              maxW="3xl"
+              textAlign="center"
+              color={textColor}
+              lineHeight="relaxed"
+            >
+              Discover cutting-edge research and insights from the AI4Bharat community. 
+              Explore our latest work in AI for Indian languages and beyond.
+            </Text>
+          </motion.div>
         </VStack>
 
-        <ClientBlogsRenderer 
-          initialBlogs={blogList} 
-          headingColor={headingColor} 
-          textColor={textColor} 
-        />
-      </Container>
+        {blogList && blogList.length > 0 && (
+          <motion.div
+            initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }}
+            animate={shouldReduceMotion ? {} : { opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <SearchAndFilter
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              totalCount={filteredBlogs.length}
+            />
+          </motion.div>
+        )}
+
+        {blogList && blogList.length > 0 ? (
+          filteredBlogs.length > 0 ? (
+            <SimpleGrid columns={gridColumns} spacing={6} w="full">
+              <AnimatePresence>
+                {filteredBlogs.map((blog, index) => (
+                  <BlogCard key={blog.id} blog={blog} index={index} />
+                ))}
+              </AnimatePresence>
+            </SimpleGrid>
+          ) : (
+            <Center py={20}>
+              <VStack spacing={6} textAlign="center">
+                <Icon as={FaSearch} fontSize="4xl" color="orange.400" />
+                <VStack spacing={2}>
+                  <Heading size="lg" color={headingColor}>
+                    No articles found
+                  </Heading>
+                  <Text color={textColor} maxW="md">
+                    Try adjusting your search terms or browse all articles.
+                  </Text>
+                </VStack>
+                <Button
+                  colorScheme="orange"
+                  variant="outline"
+                  onClick={() => setSearchTerm("")}
+                  borderRadius="md"
+                >
+                  Clear Search
+                </Button>
+              </VStack>
+            </Center>
+          )
+        ) : (
+          <Center py={20}>
+            <VStack spacing={6} textAlign="center">
+              <Icon as={FaBookOpen} fontSize="4xl" color="orange.400" />
+              <VStack spacing={2}>
+                <Heading size="lg" color={headingColor}>
+                  Coming Soon
+                </Heading>
+                <Text color={textColor} maxW="md" textAlign="center">
+                  We're working on bringing you amazing research content. 
+                  Check back soon for the latest insights and innovations.
+                </Text>
+              </VStack>
+            </VStack>
+          </Center>
+        )}
+      </MotionContainer>
     </Box>
   );
 }

@@ -4,6 +4,9 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import BlogContentDisplay from './BlogContentDisplay';
 
+export const dynamicParams = true;
+export const revalidate = 3600;
+
 interface Blog {
   id: number;
   title: string;
@@ -42,55 +45,77 @@ function validateBlogData(blog: any): blog is Blog {
          typeof blog.page_url === 'string';
 }
 
-export async function generateStaticParams() {
+// Cache implementation
+let cachedBlogs: Blog[] | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+
+async function getAllBlogPostsCached(): Promise<Blog[]> {
+  const now = Date.now();
+  
+  if (cachedBlogs && (now - cacheTimestamp) < CACHE_DURATION) {
+    return cachedBlogs;
+  }
+
+  const endpoint = `${API_URL}/news/`;
+
   try {
     // Check if we're in a build environment where API might not be accessible
     if (!API_URL) {
-      console.warn('API_URL not defined, returning empty static params');
-      return [];
+      console.warn('API_URL not defined, returning cached or empty data');
+      return cachedBlogs || [];
     }
 
-    const response = await fetch(`${API_URL}/news/`, {
+    const response = await fetch(endpoint, {
       headers: {
         'Content-Type': 'application/json',
       },
-      next: { revalidate: 60 }
+      next: { 
+        revalidate: 3600,
+        tags: ['blog-list'] 
+      }
     });
     
     if (!response.ok) {
-      console.error(`Failed to fetch blog list: ${response.status} ${response.statusText}`);
-      return [];
+      console.warn(`Failed to fetch blogs: ${response.status}`);
+      return cachedBlogs || [];
     }
     
-    const blogs: Blog[] = await response.json();
+    const data = await response.json();
+    const blogs = Array.isArray(data) ? data : [];
     
     // Validate and filter blogs
     const validBlogs = blogs.filter(validateBlogData);
     
-    return validBlogs.map((blog) => ({
-      slug: blog.page_url,
-    }));
+    cachedBlogs = validBlogs;
+    cacheTimestamp = now;
+
+    return validBlogs;
   } catch (error) {
-    console.error("Error generating static params:", error);
+    console.error('Error fetching blogs:', error);
+    return cachedBlogs || [];
+  }
+}
+
+export async function generateStaticParams() {
+  try {
+    const blogs = await getAllBlogPostsCached();
+    
+    const params = blogs
+      .filter(blog => blog.page_url && blog.page_url.trim() !== '')
+      .map((blog) => ({ slug: blog.page_url }));
+    
+    return params;
+  } catch (error) {
+    console.error('Error generating static params:', error);
     return [];
   }
 }
 
 async function getIdFromPageUrl(pageUrl: string): Promise<number> {
   try {
-    const res = await fetch(`${API_URL}/news/`, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      next: { revalidate: 60 }
-    });
-    
-    if (!res.ok) {
-      throw new Error(`Failed to fetch blog list: ${res.status}`);
-    }
-    
-    const blogs = await res.json();
-    const blog = blogs.find((b: Blog) => b.page_url === pageUrl);
+    const blogs = await getAllBlogPostsCached();
+    const blog = blogs.find(blog => blog.page_url === pageUrl);
     
     if (!blog || !validateBlogData(blog)) {
       notFound();
@@ -104,12 +129,17 @@ async function getIdFromPageUrl(pageUrl: string): Promise<number> {
 }
 
 async function getBlogPostById(id: number): Promise<Blog> {
+  const endpoint = `${API_URL}/news/${id}`;
+
   try {
-    const res = await fetch(`${API_URL}/news/${id}`, {
+    const res = await fetch(endpoint, {
       headers: {
         'Content-Type': 'application/json',
       },
-      next: { revalidate: 60 }
+      next: { 
+        revalidate: 3600,
+        tags: [`blog-${id}`]
+      }
     });
     
     if (!res.ok) {
@@ -133,6 +163,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   try {
     const blogId = await getIdFromPageUrl(params.slug);
     const blog = await getBlogPostById(blogId);
+    
     const imageUrl = blog.image || blog.cover_image?.src;
     const images = imageUrl ? [imageUrl] : [];
     
@@ -150,7 +181,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       }
     };
     
-    return {
+    const metadata: Metadata = {
       title: `${blog.title} | AI4Bharat Blog`,
       description: blog.description,
       keywords: [
@@ -201,6 +232,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
         'application/ld+json': JSON.stringify(structuredData),
       },
     };
+
+    return metadata;
   } catch (error) {
     console.error("Error generating metadata:", error);
     return {
@@ -214,6 +247,7 @@ export default async function BlogDetailPage({ params }: { params: { slug: strin
   try {
     const blogId = await getIdFromPageUrl(params.slug);
     const blog = await getBlogPostById(blogId);
+    
     return <BlogContentDisplay blog={blog} />;
   } catch (error) {
     console.error("Error in BlogDetailPage:", error);
