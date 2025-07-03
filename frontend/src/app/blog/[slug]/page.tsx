@@ -4,9 +4,6 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import BlogContentDisplay from './BlogContentDisplay';
 
-export const dynamicParams = true;
-export const revalidate = 3600;
-
 interface Blog {
   id: number;
   title: string;
@@ -37,105 +34,44 @@ interface Blog {
   bibtex?: string;
 }
 
-let cachedBlogs: Blog[] | null = null;
-let cacheTimestamp: number = 0;
-const CACHE_DURATION = 10 * 60 * 1000;
-
-async function getAllBlogPostsCached(): Promise<Blog[]> {
-  const now = Date.now();
-  
-  if (cachedBlogs && (now - cacheTimestamp) < CACHE_DURATION) {
-    return cachedBlogs;
-  }
-
-  const endpoint = `${API_URL}/news/`;
-
-  try {
-    const res = await fetch(endpoint, { 
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      next: { 
-        revalidate: 3600,
-        tags: ['blog-list'] 
-      }
-    });
-    
-    if (!res.ok) {
-      return cachedBlogs || [];
-    }
-    
-    const data = await res.json();
-    const blogs = Array.isArray(data) ? data : [];
-    
-    cachedBlogs = blogs;
-    cacheTimestamp = now;
-
-    return blogs;
-  } catch (error) {
-    return cachedBlogs || [];
-  }
-}
-
 async function getIdFromPageUrl(pageUrl: string): Promise<number> {
-  const blogs = await getAllBlogPostsCached();
-  const blog = blogs.find(blog => blog.page_url === pageUrl);
-  
+  const res = await fetch(`${API_URL}/news/`, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store', 
+  });
+  if (!res.ok) {
+    notFound();
+  }
+  const blogs = await res.json();
+  const blog = blogs.find((b: Blog) => b.page_url === pageUrl);
   if (!blog) {
     notFound();
   }
-  
   return blog.id;
 }
 
 async function getBlogPostById(id: number): Promise<Blog> {
-  const endpoint = `${API_URL}/news/${id}`;
-
-  try {
-    const res = await fetch(endpoint, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      next: { 
-        revalidate: 3600,
-        tags: [`blog-${id}`]
-      }
-    });
-    
-    if (!res.ok) {
-      notFound();
-    }
-    
-    const blog = await res.json();
-    return blog;
-  } catch (error) {
+  const res = await fetch(`${API_URL}/news/${id}`, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store', 
+  });
+  if (!res.ok) {
     notFound();
   }
-}
-
-export async function generateStaticParams() {
-  try {
-    const blogs = await getAllBlogPostsCached();
-    
-    const params = blogs
-      .filter(blog => blog.page_url && blog.page_url.trim() !== '')
-      .map((blog) => ({ slug: blog.page_url }));
-    
-    return params;
-  } catch (error) {
-    return [];
-  }
+  return await res.json();
 }
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   try {
     const blogId = await getIdFromPageUrl(params.slug);
     const blog = await getBlogPostById(blogId);
-    
     const imageUrl = blog.image || blog.cover_image?.src;
     const images = imageUrl ? [imageUrl] : [];
-    
-    const metadata: Metadata = {
+    return {
       title: `${blog.title} | AI4Bharat Blog`,
       description: blog.description,
       keywords: [
@@ -183,8 +119,6 @@ export async function generateMetadata({ params }: { params: { slug: string } })
         },
       },
     };
-
-    return metadata;
   } catch (error) {
     return {
       title: 'Blog Post | AI4Bharat',
@@ -197,7 +131,6 @@ export default async function BlogDetailPage({ params }: { params: { slug: strin
   try {
     const blogId = await getIdFromPageUrl(params.slug);
     const blog = await getBlogPostById(blogId);
-    
     return <BlogContentDisplay blog={blog} />;
   } catch (error) {
     notFound();
