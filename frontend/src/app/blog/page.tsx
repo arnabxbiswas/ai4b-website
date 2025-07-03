@@ -80,6 +80,14 @@ interface Blog {
 const MotionBox = motion(Box);
 const MotionContainer = motion(Container);
 
+// Function to validate blog data
+function validateBlogData(blog: any): blog is Blog {
+  return blog && 
+         typeof blog.id === 'number' && 
+         typeof blog.title === 'string' &&
+         typeof blog.page_url === 'string';
+}
+
 function getSectionsArray(sections: any): any[] {
   if (Array.isArray(sections)) {
     return sections;
@@ -114,22 +122,21 @@ function getReadingTime(content: string, sections?: any[]): string {
         if (section.headers && Array.isArray(section.headers)) {
           totalText += ' ' + section.headers.join(' ');
         }
-       if (section.rows && Array.isArray(section.rows)) {
-  section.rows.forEach((row: string[]) => {
-    if (Array.isArray(row)) {
-      totalText += ' ' + row.join(' ');
-    }
-  });
-}
-
+        if (section.rows && Array.isArray(section.rows)) {
+          section.rows.forEach((row: string[]) => {
+            if (Array.isArray(row)) {
+              totalText += ' ' + row.join(' ');
+            }
+          });
+        }
       }
       
-     if (section.type === 'examples' && section.items && Array.isArray(section.items)) {
-  section.items.forEach((item: { id: string; prompt: string; response: string }) => {
-    if (item.prompt) totalText += ' ' + item.prompt;
-    if (item.response) totalText += ' ' + item.response;
-  });
-}
+      if (section.type === 'examples' && section.items && Array.isArray(section.items)) {
+        section.items.forEach((item: { id: string; prompt: string; response: string }) => {
+          if (item.prompt) totalText += ' ' + item.prompt;
+          if (item.response) totalText += ' ' + item.response;
+        });
+      }
       
       if (section.image && section.image.caption) {
         totalText += ' ' + section.image.caption;
@@ -410,19 +417,32 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
 const fetchBlogList = async (): Promise<Blog[]> => {
   const endpoint = `${API_URL}/news/`;
 
-  const response = await fetch(endpoint, { 
-    next: { revalidate: 3600 },
-    headers: {
-      'Content-Type': 'application/json',
+  try {
+    if (!API_URL) {
+      throw new Error('API_URL is not configured');
     }
-  });
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch blog list: ${response.status} ${response.statusText}`);
+    const response = await fetch(endpoint, { 
+      next: { revalidate: 3600 },
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch blog list: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    // Validate and filter blog data
+    const validBlogs = Array.isArray(data) ? data.filter(validateBlogData) : [];
+    
+    return validBlogs;
+  } catch (error) {
+    console.error("Error fetching blogs:", error);
+    throw error;
   }
-  
-  const data = await response.json();
-  return data;
 };
 
 export default function BlogsPage() {
@@ -531,7 +551,10 @@ export default function BlogsPage() {
                   Unable to load articles
                 </AlertTitle>
                 <AlertDescription maxWidth="sm" fontSize="md">
-                  Please check your internet connection and try again.
+                  {error instanceof Error && error.message.includes('API_URL') 
+                    ? 'Configuration error. Please try again later.' 
+                    : 'Please check your internet connection and try again.'
+                  }
                 </AlertDescription>
               </Alert>
               <Button
