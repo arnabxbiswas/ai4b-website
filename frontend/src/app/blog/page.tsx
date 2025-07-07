@@ -103,6 +103,74 @@ function getSectionsArray(sections: any): any[] {
   return [];
 }
 
+// Enhanced hook for comprehensive image fallback logic
+function useImageWithFallback(blog: Blog) {
+  const [imageError, setImageError] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  const imageSources = useMemo(() => {
+    const sources: string[] = [];
+    
+    // Priority 1: Cover image (HIGHEST PRIORITY)
+    if (blog.cover_image?.src) {
+      sources.push(blog.cover_image.src);
+    }
+    
+    // Priority 2: Main blog image
+    if (blog.image) {
+      sources.push(blog.image);
+    }
+    
+    // Priority 3: Extract images from sections
+    const sectionsArray = getSectionsArray(blog.sections);
+    if (sectionsArray && sectionsArray.length > 0) {
+      sectionsArray.forEach(section => {
+        if (section.type === 'image' && section.image?.src) {
+          sources.push(section.image.src);
+        }
+      });
+    }
+    
+    // Priority 4: Extract images from markdown content
+    if (blog.markdown_content) {
+      const imageRegex = /!\[.*?\]\((.*?)\)/g;
+      let match;
+      while ((match = imageRegex.exec(blog.markdown_content)) !== null) {
+        if (match[1] && match[1].trim()) {
+          // Clean up the URL (remove quotes if present)
+          const cleanUrl = match[1].trim().replace(/^["']|["']$/g, '');
+          sources.push(cleanUrl);
+        }
+      }
+    }
+    
+    // Remove duplicates and filter out empty strings
+    return Array.from(new Set(sources.filter(src => src && src.trim() !== '')));
+  }, [blog]);
+  
+  const currentImageSrc = imageSources[currentImageIndex] || null;
+  
+  const handleImageError = useCallback(() => {
+    console.log(`Image failed to load: ${currentImageSrc}`);
+    if (currentImageIndex < imageSources.length - 1) {
+      setCurrentImageIndex(prev => prev + 1);
+      setImageError(false); // Reset error state for next image
+    } else {
+      setImageError(true);
+    }
+  }, [currentImageIndex, imageSources.length, currentImageSrc]);
+  
+  return {
+    imageSrc: currentImageSrc,
+    imageError: imageError && currentImageIndex >= imageSources.length - 1,
+    handleImageError,
+    hasImages: imageSources.length > 0,
+    imageAlt: blog.cover_image?.alt || `Cover image for ${blog.title}`,
+    totalImages: imageSources.length,
+    currentIndex: currentImageIndex
+  };
+}
+
 function getReadingTime(content: string, sections?: any[]): string {
   const WORDS_PER_MINUTE = 225;
   
@@ -267,7 +335,15 @@ function SearchAndFilter({
 
 function BlogCard({ blog, index }: { blog: Blog; index: number }) {
   const shouldReduceMotion = useReducedMotion();
-  const [imageError, setImageError] = useState(false);
+  const { 
+    imageSrc, 
+    imageError, 
+    handleImageError, 
+    hasImages, 
+    imageAlt,
+    totalImages,
+    currentIndex
+  } = useImageWithFallback(blog);
   
   const cardBg = useColorModeValue("white", "gray.700");
   const borderColor = useColorModeValue("orange.100", "orange.700");
@@ -277,7 +353,6 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
 
   const readingTime = getReadingTime(blog.markdown_content, getSectionsArray(blog.sections));
   const authorNames = blog.authors?.map(author => author.name).join(", ") || "AI4Bharat Team";
-  const coverImageSrc = blog.image || blog.cover_image?.src;
 
   return (
     <MotionBox
@@ -313,26 +388,40 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
         role="article"
       >
         <AspectRatio ratio={16/9} bg="orange.50">
-          {coverImageSrc && !imageError ? (
+          {imageSrc && !imageError ? (
             <Image
-              src={coverImageSrc}
-              alt={blog.cover_image?.alt || blog.title}
+              src={imageSrc}
+              alt={imageAlt}
               fill
               style={{
                 objectFit: 'cover',
                 objectPosition: 'center',
               }}
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              onError={() => setImageError(true)}
+              onError={handleImageError}
               quality={75}
+              priority={index < 3} // Prioritize first 3 images for performance
             />
           ) : (
             <Center bg="orange.50">
               <VStack spacing={2}>
                 <Icon as={FaBookOpen} fontSize="2xl" color="orange.400" />
-                <Text color="orange.600" fontSize="sm" fontWeight="medium">
-                  Article
+                <Text 
+                  color="orange.600" 
+                  fontSize="sm" 
+                  fontWeight="medium"
+                  textAlign="center"
+                  px={4}
+                  noOfLines={2}
+                >
+                  {blog.title.length > 40 ? `${blog.title.substring(0, 40)}...` : blog.title}
                 </Text>
+                {/* Debug info - remove in production */}
+                {process.env.NODE_ENV === 'development' && (
+                  <Text fontSize="xs" color="orange.400">
+                    {hasImages ? `${currentIndex + 1}/${totalImages} failed` : 'No images'}
+                  </Text>
+                )}
               </VStack>
             </Center>
           )}
