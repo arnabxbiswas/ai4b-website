@@ -162,7 +162,8 @@ class Publication(models.Model):
     title = models.CharField(max_length=200)
     dataset = models.ManyToManyField(Dataset,null=True,blank=True)
     model = models.ManyToManyField(Model,null=True,blank=True,)
-    
+    authors = models.CharField(max_length=500, blank=True)  
+
 
     def __str__(self) -> str:
         return f"{self.title}"

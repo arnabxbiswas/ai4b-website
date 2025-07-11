@@ -101,7 +101,8 @@ class PublicationSerializer(ModelSerializer):
             "id",
             "title",
             "model",
-            "dataset"
+            "dataset",
+            "authors"
         ]
 
 
