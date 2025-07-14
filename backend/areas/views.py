@@ -389,6 +389,7 @@ class PubViewSet(viewsets.ModelViewSet):
                 new_publication["published_on"] = publication["dataset"][0]["published_on"]
             new_publication["model"] = publication["model"]
             new_publication["dataset"] = publication["dataset"]
+            new_publication["authors"] = publication["authors"]
             formatted_publications.append(new_publication)
         
         formatted_publications.sort(key=lambda pub: pub.get("published_on"),reverse=True)
