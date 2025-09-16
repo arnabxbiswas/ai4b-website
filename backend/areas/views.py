@@ -506,7 +506,7 @@ class ModelViewSet(viewsets.ModelViewSet):
                 hf_link = hf_link.replace("https://huggingface.co/collections/","https://huggingface.co/api/collections/")
                 response = requests.get(hf_link)
                 items = response.json()["items"]
-                downloads = sum([item["downloads"] for item in items])
+                downloads = sum([item.get("downloads", 0) for item in items])
                 hfData = {'downloads':downloads}
             
 
