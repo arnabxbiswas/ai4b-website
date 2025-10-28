@@ -116,20 +116,26 @@ const DataCollectionCarousel = () => {
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
 
-  const images = [
-    "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/Data%20Collection/9.png",
-    "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/Data%20Collection/10.png",
-    "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/Data%20Collection/11.png",
-    "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/Data%20Collection/12.png",
-    "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/Data%20Collection/13.png",
-    "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/Data%20Collection/14.png",
-    "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/Data%20Collection/15.png",
-    "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/Data%20Collection/16.png",
-    "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/Data%20Collection/17.png",
-    "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/Data%20Collection/18.png",
-    "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/Data%20Collection/19.png",
-    "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/Data%20Collection/20.png",
-  ];
+const images = [
+  "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/data-collection-new/9.png",
+  "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/data-collection-new/10.png",
+  "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/data-collection-new/11.png",
+  "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/data-collection-new/12.png",
+  "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/data-collection-new/13.png",
+  "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/data-collection-new/14.png",
+  "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/data-collection-new/15.png",
+  "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/data-collection-new/16.png",
+  "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/data-collection-new/17.png",
+  "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/data-collection-new/18.png",
+  "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/data-collection-new/19.png",
+  "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/data-collection-new/20.png",
+  "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/data-collection-new/21.png",
+  "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/data-collection-new/22.png",
+  "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/data-collection-new/23.png",
+  "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/data-collection-new/24.png",
+  "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/data-collection-new/25.png",
+  "https://shoonyastorageproduction.blob.core.windows.net/ai4bwebsite/data-collection-new/26.png",
+];
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50;
