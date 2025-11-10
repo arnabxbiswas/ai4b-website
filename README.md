@@ -1,4 +1,6 @@
-## tep 1: Install Caddy
+## BACKEND DEPLOYMENT STEPS
+
+## Step 1: Install Caddy
 
 Run the following commands to install Caddy on the server:
 
