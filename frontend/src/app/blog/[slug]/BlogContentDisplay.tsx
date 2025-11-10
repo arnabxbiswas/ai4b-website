@@ -1,5 +1,5 @@
 "use client";
-
+//added new features
 import React, { useState, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import Link from 'next/link';
