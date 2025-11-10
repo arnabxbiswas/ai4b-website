@@ -81,12 +81,13 @@ interface Blog {
 const MotionBox = motion(Box);
 const MotionContainer = motion(Container);
 
-// Function to validate blog data
+// ✅ FIXED: Stricter validation - must have non-empty page_url
 function validateBlogData(blog: any): blog is Blog {
   return blog && 
          typeof blog.id === 'number' && 
          typeof blog.title === 'string' &&
-         typeof blog.page_url === 'string';
+         typeof blog.page_url === 'string' &&
+         blog.page_url.trim() !== ''; // ✅ Must be non-empty
 }
 
 function getSectionsArray(sections: any): any[] {
@@ -155,7 +156,7 @@ function useImageWithFallback(blog: Blog) {
     console.log(`Image failed to load: ${currentImageSrc}`);
     if (currentImageIndex < imageSources.length - 1) {
       setCurrentImageIndex(prev => prev + 1);
-      setImageError(false); // Reset error state for next image
+      setImageError(false);
     } else {
       setImageError(true);
     }
@@ -355,6 +356,12 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
   const readingTime = getReadingTime(blog.markdown_content, getSectionsArray(blog.sections));
   const authorNames = blog.authors?.map(author => author.name).join(", ") || "AI4Bharat Team";
 
+  // ✅ ADDED: Safety check for invalid page_url
+  if (!blog.page_url || blog.page_url.trim() === '') {
+    console.error(`Blog ${blog.id} has invalid page_url:`, blog.page_url);
+    return null;
+  }
+
   return (
     <MotionBox
       initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }}
@@ -401,7 +408,7 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               onError={handleImageError}
               quality={75}
-              priority={index < 3} // Prioritize first 3 images for performance
+              priority={index < 3}
             />
           ) : (
             <Center bg="orange.50">
@@ -417,7 +424,6 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
                 >
                   {blog.title.length > 40 ? `${blog.title.substring(0, 40)}...` : blog.title}
                 </Text>
-                {/* Debug info - remove in production */}
                 {process.env.NODE_ENV === 'development' && (
                   <Text fontSize="xs" color="orange.400">
                     {hasImages ? `${currentIndex + 1}/${totalImages} failed` : 'No images'}
@@ -483,7 +489,7 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
 
           <Button
             as={Link}
-            href={`/blog/${blog.page_url || blog.id}`}
+            href={`/blog/${blog.page_url}`}  // ✅ FIXED: Removed || blog.id fallback
             colorScheme="orange"
             size="sm"
             variant="solid"
@@ -504,6 +510,7 @@ function BlogCard({ blog, index }: { blog: Blog; index: number }) {
   );
 }
 
+// ✅ IMPROVED: Added comprehensive logging
 const fetchBlogList = async (): Promise<Blog[]> => {
   const endpoint = `${API_URL}/news/`;
 
@@ -511,6 +518,8 @@ const fetchBlogList = async (): Promise<Blog[]> => {
     if (!API_URL) {
       throw new Error('API_URL is not configured');
     }
+
+    console.log('[fetchBlogList] Fetching from:', endpoint);
 
     const response = await fetch(endpoint, { 
       next: { revalidate: 3600 },
@@ -525,8 +534,25 @@ const fetchBlogList = async (): Promise<Blog[]> => {
     
     const data = await response.json();
     
-    // Validate and filter blog data
-    const validBlogs = Array.isArray(data) ? data.filter(validateBlogData) : [];
+    console.log('[fetchBlogList] Raw blogs count:', data.length);
+    
+    // Validate and filter blog data with logging
+    const validBlogs = Array.isArray(data) ? data.filter(blog => {
+      const isValid = validateBlogData(blog);
+      if (!isValid) {
+        console.warn('[fetchBlogList] Filtered out invalid blog:', {
+          id: blog?.id,
+          title: blog?.title,
+          page_url: blog?.page_url
+        });
+      }
+      return isValid;
+    }) : [];
+    
+    console.log('[fetchBlogList] Valid blogs count:', validBlogs.length);
+    console.log('[fetchBlogList] Available page_urls:', 
+      validBlogs.map(b => ({ id: b.id, page_url: b.page_url }))
+    );
     
     return validBlogs;
   } catch (error) {
