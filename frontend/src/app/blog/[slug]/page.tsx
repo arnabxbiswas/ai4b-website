@@ -6,6 +6,8 @@ import BlogContentDisplay from './BlogContentDisplay';
 
 export const dynamicParams = true;
 export const revalidate = 3600;
+//added new features
+
 
 interface Blog {
   id: number;
