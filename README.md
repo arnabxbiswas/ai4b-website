@@ -2,7 +2,7 @@
 
 ## Step 1: Install Caddy
 
-Run the following commands to install Caddy on the server:
+Run the following commands to install caddy on the server:
 
 ```
 sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https
