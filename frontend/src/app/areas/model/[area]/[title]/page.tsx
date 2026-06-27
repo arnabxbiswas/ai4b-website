@@ -10,21 +10,32 @@ interface Model {
 import axios from "axios";
 
 export async function generateStaticParams() {
-  const response = await axios.get(
-    "https://admin.models.ai4bharat.org/models/"
-  );
-  const models = response.data;
+  try {
+    const response = await axios.get(
+      "https://admin.models.ai4bharat.org/models/"
+    );
+    const models = response.data;
 
-  let params: any[] = [];
+    let params: any[] = [];
 
-  models.forEach((model: Model) => {
-    params.push({
-      area: model.area,
-      title: model.title,
-    });
-  });
+    if (Array.isArray(models)) {
+      models.forEach((model: Model) => {
+        params.push({
+          area: model.area,
+          title: model.title,
+        });
+      });
+    }
 
-  return params;
+    if (params.length === 0) {
+      return [{ area: 'fallback', title: 'fallback' }];
+    }
+
+    return params;
+  } catch (error) {
+    console.error('Error generating static params:', error);
+    return [{ area: 'fallback', title: 'fallback' }];
+  }
 }
 
 export default function Model({
