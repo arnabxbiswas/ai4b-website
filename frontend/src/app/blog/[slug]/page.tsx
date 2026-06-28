@@ -83,7 +83,12 @@ async function getAllBlogPostsCached(): Promise<Blog[]> {
       return cachedBlogs || [];
     }
     
-    const data = await response.json();
+    const text = await response.text();
+    if (!text) {
+      console.warn('Empty response body received from API');
+      return cachedBlogs || [];
+    }
+    const data = JSON.parse(text);
     const blogs = Array.isArray(data) ? data : [];
     
     // Validate and filter blogs
@@ -107,10 +112,13 @@ export async function generateStaticParams() {
       .filter(blog => blog.page_url && blog.page_url.trim() !== '')
       .map((blog) => ({ slug: blog.page_url }));
     
+    if (params.length === 0) {
+      return [{ slug: 'fallback' }];
+    }
     return params;
   } catch (error) {
     console.error('Error generating static params:', error);
-    return [];
+    return [{ slug: 'fallback' }];
   }
 }
 
