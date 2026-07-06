@@ -131,7 +131,7 @@ async function getIdFromPageUrl(pageUrl: string): Promise<number> {
 }
 
 async function getBlogPostById(id: number): Promise<Blog> {
-  const endpoint = `${API_URL}/news/${id}`;
+  const endpoint = `${API_URL}/news/${id}/`;
 
   try {
     const res = await fetch(endpoint, {
