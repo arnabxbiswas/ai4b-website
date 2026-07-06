@@ -525,6 +525,7 @@ const fetchBlogList = async (): Promise<Blog[]> => {
       next: { revalidate: 3600 },
       headers: {
         'Content-Type': 'application/json',
+        'User-Agent': 'AI4Bharat-Website-Builder/1.0',
       }
     });
 

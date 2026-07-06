@@ -71,10 +71,11 @@ async function getAllBlogPostsCached(): Promise<Blog[]> {
     const response = await fetch(endpoint, {
       headers: {
         'Content-Type': 'application/json',
+        'User-Agent': 'AI4Bharat-Website-Builder/1.0',
       },
       next: { 
         revalidate: 3600,
-        tags: ['blog-list'] 
+        tags: ['blog-list-v2'] 
       }
     });
     
@@ -145,10 +146,11 @@ async function getBlogPostById(id: number): Promise<Blog> {
     const res = await fetch(endpoint, {
       headers: {
         'Content-Type': 'application/json',
+        'User-Agent': 'AI4Bharat-Website-Builder/1.0',
       },
       next: { 
         revalidate: 3600,
-        tags: [`blog-${id}`]
+        tags: [`blog-${id}-v2`]
       }
     });
     
