@@ -861,6 +861,116 @@ export default function BlogContentDisplay({ blog }: BlogContentDisplayProps) {
     }
   }, [blog.bibtex, toast]);
 
+  const markdownComponents = {
+    h1: ({ children }: any) => (
+      <Heading as="h1" size={{ base: 'xl', md: '2xl' }} mb={4} color={headingColor} fontWeight="bold">
+        {children}
+      </Heading>
+    ),
+    h2: ({ children }: any) => (
+      <Heading as="h2" size={{ base: 'lg', md: 'xl' }} mb={3} color={headingColor} fontWeight="bold">
+        {children}
+      </Heading>
+    ),
+    h3: ({ children }: any) => (
+      <Heading as="h3" size={{ base: 'md', md: 'lg' }} mb={2} color={headingColor} fontWeight="bold">
+        {children}
+      </Heading>
+    ),
+    p: ({ children }: any) => (
+      <Text mb={4} lineHeight="1.8" color={textColor} fontSize={{ base: 'sm', md: 'md' }}>
+        {children}
+      </Text>
+    ),
+    strong: ({ children }: any) => (
+      <Text 
+        as="span" 
+        fontWeight="bold" 
+        color={useColorModeValue('orange.700', 'orange.300')}
+        fontSize="inherit"
+      >
+        {children}
+      </Text>
+    ),
+    em: ({ children }: any) => (
+      <Text as="span" fontStyle="italic" color="inherit">
+        {children}
+      </Text>
+    ),
+    a: ({ href, children }: any) => (
+      <Text 
+        as="a" 
+        href={href} 
+        color={linkColor} 
+        textDecoration="underline"
+        fontWeight="medium"
+        _hover={{ 
+          textDecoration: 'none', 
+          color: accentColor,
+          bg: useColorModeValue('orange.50', 'orange.900'),
+          px: 1,
+          borderRadius: 'sm'
+        }}
+        target={href?.startsWith('http') ? '_blank' : undefined}
+        rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
+        transition="all 0.2s ease"
+      >
+        {children}
+      </Text>
+    ),
+    ul: ({ children }: any) => (
+      <Box as="ul" ml={6} mb={4} listStyleType="disc">
+        {children}
+      </Box>
+    ),
+    ol: ({ children }: any) => (
+      <Box as="ol" ml={6} mb={4} listStyleType="decimal">
+        {children}
+      </Box>
+    ),
+    li: ({ children }: any) => (
+      <Text as="li" mb={2} lineHeight="1.6" fontSize={{ base: 'sm', md: 'md' }}>
+        {children}
+      </Text>
+    ),
+    code: ({ children, className, ...props }: any) => {
+      const isBlock = className && /language-/.test(className);
+      return isBlock ? (
+        <Box
+          as="pre"
+          bg={useColorModeValue('gray.50', 'gray.800')}
+          border="1px solid"
+          borderColor={borderColor}
+          p={4}
+          borderRadius="md"
+          overflowX="auto"
+          fontSize="xs"
+          my={4}
+          fontFamily="mono"
+        >
+          <Text as="code" color={textColor} {...props}>
+            {children}
+          </Text>
+        </Box>
+      ) : (
+        <Text
+          as="code"
+          bg={useColorModeValue('orange.100', 'orange.800')}
+          color={useColorModeValue('orange.800', 'orange.200')}
+          px={2}
+          py={1}
+          borderRadius="sm"
+          fontSize="0.85em"
+          fontWeight="medium"
+          fontFamily="mono"
+          {...props}
+        >
+          {children}
+        </Text>
+      );
+    }
+  };
+
   return (
     <Box bg={pageBg} minH="100vh" position="relative">
       <Progress
@@ -1139,7 +1249,9 @@ export default function BlogContentDisplay({ blog }: BlogContentDisplayProps) {
               },
             }}
           >
-            <ReactMarkdown>{blog.markdown_content}</ReactMarkdown>
+            <ReactMarkdown components={markdownComponents}>
+              {blog.markdown_content?.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n')}
+            </ReactMarkdown>
 
             {sectionsArray.map((section, index) => (
               <MotionBox
@@ -1153,118 +1265,8 @@ export default function BlogContentDisplay({ blog }: BlogContentDisplayProps) {
                 
                 {section.type === 'markdown' && section.content && (
                   <Box>
-                    <ReactMarkdown
-                      components={{
-                        h1: ({ children }) => (
-                          <Heading as="h1" size={{ base: 'xl', md: '2xl' }} mb={4} color={headingColor} fontWeight="bold">
-                            {children}
-                          </Heading>
-                        ),
-                        h2: ({ children }) => (
-                          <Heading as="h2" size={{ base: 'lg', md: 'xl' }} mb={3} color={headingColor} fontWeight="bold">
-                            {children}
-                          </Heading>
-                        ),
-                        h3: ({ children }) => (
-                          <Heading as="h3" size={{ base: 'md', md: 'lg' }} mb={2} color={headingColor} fontWeight="bold">
-                            {children}
-                          </Heading>
-                        ),
-                        p: ({ children }) => (
-                          <Text mb={4} lineHeight="1.8" color={textColor} fontSize={{ base: 'sm', md: 'md' }}>
-                            {children}
-                          </Text>
-                        ),
-                        strong: ({ children }) => (
-                          <Text 
-                            as="span" 
-                            fontWeight="bold" 
-                            color={useColorModeValue('orange.700', 'orange.300')}
-                            fontSize="inherit"
-                          >
-                            {children}
-                          </Text>
-                        ),
-                        em: ({ children }) => (
-                          <Text as="span" fontStyle="italic" color="inherit">
-                            {children}
-                          </Text>
-                        ),
-                        a: ({ href, children }) => (
-                          <Text 
-                            as="a" 
-                            href={href} 
-                            color={linkColor} 
-                            textDecoration="underline"
-                            fontWeight="medium"
-                            _hover={{ 
-                              textDecoration: 'none', 
-                              color: accentColor,
-                              bg: useColorModeValue('orange.50', 'orange.900'),
-                              px: 1,
-                              borderRadius: 'sm'
-                            }}
-                            target={href?.startsWith('http') ? '_blank' : undefined}
-                            rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
-                            transition="all 0.2s ease"
-                          >
-                            {children}
-                          </Text>
-                        ),
-                        ul: ({ children }) => (
-                          <Box as="ul" ml={6} mb={4} listStyleType="disc">
-                            {children}
-                          </Box>
-                        ),
-                        ol: ({ children }) => (
-                          <Box as="ol" ml={6} mb={4} listStyleType="decimal">
-                            {children}
-                          </Box>
-                        ),
-                        li: ({ children }) => (
-                          <Text as="li" mb={2} lineHeight="1.6" fontSize={{ base: 'sm', md: 'md' }}>
-                            {children}
-                          </Text>
-                        ),
-                        code: ({ children, className, ...props }) => {
-                          const isBlock = className && /language-/.test(className);
-                          return isBlock ? (
-                            <Box
-                              as="pre"
-                              bg={useColorModeValue('gray.50', 'gray.800')}
-                              border="1px solid"
-                              borderColor={borderColor}
-                              p={4}
-                              borderRadius="md"
-                              overflowX="auto"
-                              fontSize="xs"
-                              my={4}
-                              fontFamily="mono"
-                            >
-                              <Text as="code" color={textColor} {...props}>
-                                {children}
-                              </Text>
-                            </Box>
-                          ) : (
-                            <Text
-                              as="code"
-                              bg={useColorModeValue('orange.100', 'orange.800')}
-                              color={useColorModeValue('orange.800', 'orange.200')}
-                              px={2}
-                              py={1}
-                              borderRadius="sm"
-                              fontSize="0.85em"
-                              fontWeight="medium"
-                              fontFamily="mono"
-                              {...props}
-                            >
-                              {children}
-                            </Text>
-                          );
-                        }
-                      }}
-                    >
-                      {section.content}
+                    <ReactMarkdown components={markdownComponents}>
+                      {section.content?.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n')}
                     </ReactMarkdown>
                   </Box>
                 )}
