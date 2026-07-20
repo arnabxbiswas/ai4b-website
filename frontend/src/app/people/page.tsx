@@ -14,7 +14,7 @@ import {
 import { useQuery } from "react-query";
 import { API_URL } from "../config";
 import { Property } from "csstype";
-import { TabbedPeopleSection } from "../../../components/People";
+import { TabbedPeopleSection, LanguagePeopleSection } from "../../../components/People";
 
 const fetchMembers = async () => {
   try {
@@ -88,6 +88,15 @@ const renderSection = ({
           team={"6"}
         />
       );
+    case "lang":
+      return (
+        <LanguagePeopleSection
+          heading="Language Teams"
+          description=""
+          members={members}
+          team={"7"}
+        />
+      );
   }
 };
 
@@ -155,6 +164,13 @@ export default function People() {
           colorScheme="orange"
         >
           Alumni
+        </Button>
+        <Button
+          onClick={(event) => setSection("lang")}
+          value={"lang"}
+          colorScheme="orange"
+        >
+          Language Teams
         </Button>
       </Flex>
       {renderSection({ members, section })}

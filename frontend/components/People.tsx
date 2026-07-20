@@ -47,6 +47,7 @@ interface Member {
   prevRol: string;
   photo: string;
   gradYear: number;
+  language?: string;
 }
 
 const TabbedCard = ({
@@ -286,6 +287,96 @@ export function TabbedPeopleSection({
                 )
               )}
             </Flex>
+          ) : (
+            <Skeleton height={300} />
+          )}
+          <Divider variant={"solid"} colorScheme="black" m={5} />
+        </Container>
+      ))}
+    </Box>
+  );
+}
+
+export function LanguagePeopleSection({
+  heading,
+  description,
+  team,
+  members,
+}: {
+  heading: string;
+  description: string;
+  team: string;
+  members: Array<Member>;
+}) {
+  const languages: { [key: string]: string } = {
+    as: "Assamese",
+    bn: "Bengali",
+    br: "Bodo",
+    doi: "Dogri",
+    gu: "Gujarati",
+    hi: "Hindi",
+    kn: "Kannada",
+    ks: "Kashmiri",
+    kok: "Konkani",
+    mai: "Maithili",
+    ml: "Malayalam",
+    mni: "Manipuri",
+    mr: "Marathi",
+    ne: "Nepali",
+    or: "Odia",
+    pa: "Punjabi",
+    sa: "Sanskrit",
+    sat: "Santali",
+    sd: "Sindhi",
+    ta: "Tamil",
+    te: "Telugu",
+    ur: "Urdu",
+  };
+
+  const presentLanguageKeys = Array.from(
+    new Set(
+      members
+        .filter((m) => m.team === team && m.language)
+        .map((m) => m.language as string)
+    )
+  );
+
+  const sortedLanguages = presentLanguageKeys.sort((a, b) => {
+    const nameA = languages[a] || a;
+    const nameB = languages[b] || b;
+    return nameA.localeCompare(nameB);
+  });
+
+  return (
+    <Box p={4}>
+      <Stack spacing={4} as={Container} maxW={"3xl"} textAlign={"center"}>
+        <Heading fontSize={{ base: "2xl", sm: "4xl" }} fontWeight={"bold"}>
+          {heading}
+        </Heading>
+      </Stack>
+      {sortedLanguages.map((langKey, index) => (
+        <Container key={index} maxW={"5xl"} mt={12}>
+          <Heading fontSize="2xl" fontWeight={"bold"}>
+            {languages[langKey] || langKey}
+          </Heading>
+          <br />
+          {Object.keys(members).length > 0 ? (
+            <Wrap gridGap={3} justify={"center"}>
+              {members.map((member) =>
+                member.team === team && member.language === langKey ? (
+                  <Card
+                    key={`${member.first_name}_${member.last_name}`}
+                    first_name={member.first_name}
+                    last_name={member.last_name}
+                    gradYear={member.gradYear}
+                    role={member.role}
+                    photo={member.photo}
+                  />
+                ) : (
+                  <></>
+                )
+              )}
+            </Wrap>
           ) : (
             <Skeleton height={300} />
           )}
