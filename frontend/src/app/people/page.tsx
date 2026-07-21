@@ -17,52 +17,13 @@ import { Property } from "csstype";
 import { TabbedPeopleSection, LanguagePeopleSection } from "../../../components/People";
 
 const fetchMembers = async () => {
-  return [
-    {
-      id: 1,
-      first_name: "Aarav",
-      last_name: "Sharma",
-      team: "7",
-      role: "Linguistic Lead",
-      language: "hi",
-      photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
-      gradYear: null,
-      prevRol: ""
-    },
-    {
-      id: 2,
-      first_name: "Priya",
-      last_name: "Verma",
-      team: "7",
-      role: "Language Expert",
-      language: "hi",
-      photo: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&auto=format&fit=crop&q=80",
-      gradYear: null,
-      prevRol: ""
-    },
-    {
-      id: 3,
-      first_name: "Rohan",
-      last_name: "Kulkarni",
-      team: "7",
-      role: "Data Annotator",
-      language: "mr",
-      photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
-      gradYear: null,
-      prevRol: ""
-    },
-    {
-      id: 4,
-      first_name: "Ananya",
-      last_name: "Deshmukh",
-      team: "7",
-      role: "Quality Lead",
-      language: "mr",
-      photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80",
-      gradYear: null,
-      prevRol: ""
-    }
-  ];
+  try {
+    const response = await axios.get(`${API_URL}/member/`, {});
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching members:", error);
+    return [];
+  }
 };
 
 const renderSection = ({
@@ -140,13 +101,13 @@ const renderSection = ({
 };
 
 export default function People() {
-  const [members, setMembers] = useState<any[]>([]);
+  const [members, setMembers] = useState([]);
   const [section, setSection] = useState("fdr");
   const { isLoading, error, data } = useQuery("fetchMembers", fetchMembers);
   const direction = useBreakpointValue({ base: "column", md: "row" });
 
   useEffect(() => {
-    if (error || isLoading || !data) {
+    if (error || isLoading) {
       setMembers([]);
     } else {
       setMembers(data);
@@ -198,18 +159,18 @@ export default function People() {
           Delivery and Operations
         </Button>
         <Button
-          onClick={(event) => setSection("lang")}
-          value={"lang"}
-          colorScheme="orange"
-        >
-          Language Teams
-        </Button>
-        <Button
           onClick={(event) => setSection("al")}
           value={"al"}
           colorScheme="orange"
         >
           Alumni
+        </Button>
+        <Button
+          onClick={(event) => setSection("lang")}
+          value={"lang"}
+          colorScheme="orange"
+        >
+          Language Teams
         </Button>
       </Flex>
       {renderSection({ members, section })}

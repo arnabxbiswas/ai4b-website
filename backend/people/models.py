@@ -69,7 +69,7 @@ class Member(models.Model):
     first_name = models.CharField(max_length=200)
     last_name = models.CharField(max_length=200)
     team = models.CharField(max_length=50, choices=Team.choices)
-    role = models.CharField(max_length=100, null=True, blank=True)
+    role = models.CharField(max_length=100)
     prevRol = models.CharField(max_length=20,choices=Role.choices,null=True,blank=True)
     gradYear = models.IntegerField(choices=year_choices(), validators=[MinValueValidator(1984), max_value_current_year],null=True,blank=True)
     photo = models.ImageField(upload_to=user_directory_path,null=True,blank=True)
