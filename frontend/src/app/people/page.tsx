@@ -140,13 +140,13 @@ const renderSection = ({
 };
 
 export default function People() {
-  const [members, setMembers] = useState([]);
+  const [members, setMembers] = useState<any[]>([]);
   const [section, setSection] = useState("fdr");
   const { isLoading, error, data } = useQuery("fetchMembers", fetchMembers);
   const direction = useBreakpointValue({ base: "column", md: "row" });
 
   useEffect(() => {
-    if (error || isLoading) {
+    if (error || isLoading || !data) {
       setMembers([]);
     } else {
       setMembers(data);
