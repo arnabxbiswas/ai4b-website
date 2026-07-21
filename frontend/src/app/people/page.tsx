@@ -159,18 +159,18 @@ export default function People() {
           Delivery and Operations
         </Button>
         <Button
-          onClick={(event) => setSection("al")}
-          value={"al"}
-          colorScheme="orange"
-        >
-          Alumni
-        </Button>
-        <Button
           onClick={(event) => setSection("lang")}
           value={"lang"}
           colorScheme="orange"
         >
           Language Teams
+        </Button>
+        <Button
+          onClick={(event) => setSection("al")}
+          value={"al"}
+          colorScheme="orange"
+        >
+          Alumni
         </Button>
       </Flex>
       {renderSection({ members, section })}
